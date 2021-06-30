@@ -6,6 +6,7 @@
 #define LOG_WIFI 2
 #define LOG_BLE 3
 #define LOG_THINGSBOARD 4
+#define LOG_VICTRON 5
 
 #define LOG_FATAL 0
 #define LOG_ERROR 1
@@ -34,7 +35,7 @@ public:
     void send(uint16_t component, const char *str);
 private:
     bool enabled = true;
-    uint8_t logLevel = LOG_INFO;
+    uint8_t logLevel = LOG_DEBUG;
 };
 
 extern Logger logger;

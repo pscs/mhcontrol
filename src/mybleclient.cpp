@@ -1,5 +1,7 @@
 #include "mybleclient.h"
 
+#include "logger.h"
+
 
 struct NotifyInfo {
     NotifyInfo(): pClient(nullptr), index(0) {}
@@ -10,11 +12,11 @@ struct NotifyInfo {
 
 static std::map<const BLERemoteCharacteristic *, NotifyInfo> characteristics;
 
-MyBLEClient::MyBLEClient(const char *addr, bool hasPasscode_, uint32_t passcode_): address(addr), 
+MyBLEClient::MyBLEClient(const char *addr, bool hasPasscode_, uint32_t passcode_): address(addr, 1), 
             hasPasscode(hasPasscode_), passcode(passcode_) {
     pClient = BLEDevice::createClient();
     pClientCallback = new MyBLEClientCallback(this);
-    pClient->setClientCallbacks(pClientCallback);
+    pClient->setClientCallbacks(pClientCallback, false);
 }
 
 MyBLEClient::~MyBLEClient() {
@@ -23,7 +25,7 @@ MyBLEClient::~MyBLEClient() {
     if (isConnected()) {
         pClient->disconnect();
         pClient->setClientCallbacks(nullptr);
-        delete pClient;
+        BLEDevice::deleteClient(pClient);
         delete pClientCallback;
     }
     free(pNotifyBuffer);
@@ -44,6 +46,21 @@ void MyBLEClient::onDisconnect() {
 
 
 MyBLEClientCallback::MyBLEClientCallback(MyBLEClient *p): pClient(p) {
+}
+
+uint32_t MyBLEClientCallback::onPassKeyRequest() {
+    logger.print(LOG_BLE, LOG_INFO, "Client Passkey - %06d\n", passcode);
+    return passcode;
+}
+
+void MyBLEClientCallback::onAuthenticationComplete(ble_gap_conn_desc *desc) {
+    logger.print(LOG_BLE, LOG_INFO, "Client Authentication complete - %d %d %d\n", desc->sec_state.authenticated, 
+        desc->sec_state.encrypted, desc->sec_state.bonded);
+}
+
+bool MyBLEClientCallback::onConfirmPIN(uint32_t pin) {
+    logger.print(LOG_BLE, LOG_INFO, "Client Confirm PIN - %06d\n", pin);
+    return true;
 }
 
 void registerCharacteristics(BLERemoteCharacteristic *pBLERemoteCharacteristics, MyBLEClient *client, int index)

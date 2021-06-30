@@ -173,7 +173,7 @@ void my_touchpad_read(lv_indev_drv_t * indev_driver, lv_indev_data_t * data)
 
 void WiFiEvent(WiFiEvent_t event)
 {
-    logger.print(LOG_WIFI, LOG_VERBOSE, "[WiFi-event] event: %d", event);
+    logger.print(LOG_WIFI, LOG_VERBOSE, "[WiFi-event] event: %d\n", event);
 
     switch (event) {
         case ARDUINO_EVENT_WIFI_READY: 

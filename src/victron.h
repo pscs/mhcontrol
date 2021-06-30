@@ -1,6 +1,6 @@
 #pragma once
 
-#include <BLEDevice.h>
+//#include <BLEDevice.h>
 
 #include "mybleclient.h"
 

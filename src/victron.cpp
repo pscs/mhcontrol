@@ -3,6 +3,8 @@
 #include <Arduino.h>
 #include "ble.h"
 
+#include "logger.h"
+
 static const BLEUUID generalServiceUUID("306b0001-b081-4037-83dc-e59fcc3cdfd0");
 static const BLEUUID charUUID1("306b0002-b081-4037-83dc-e59fcc3cdfd0");
 static const BLEUUID charUUID2("306b0003-b081-4037-83dc-e59fcc3cdfd0");
@@ -12,10 +14,11 @@ const int NotifyBufferSize = 100;
 
 
 Victron::Victron(const char *addr, uint32_t passcode): MyBLEClient(addr, true, passcode) {
+    pClientCallback->setPasscode(passcode);
 }
 
 Victron::~Victron() {
-    printf("Victron - destructor\n");
+    logger.print(LOG_VICTRON, LOG_DEBUG, "Victron - destructor\n");
     unregisterAll();
 }
 
@@ -24,38 +27,39 @@ bool Victron::connectIfNecessary()
     if (!pNotifyBuffer) {
         pNotifyBuffer = reinterpret_cast<uint8_t *>(ps_malloc(NotifyBufferSize));
     }
-    printf("Victron - try connect\n");
+    logger.print(LOG_VICTRON, LOG_INFO, "Victron - try connect\n");
     if (isConnected()) {
-        printf("Victron - already connected\n");
+        logger.print(LOG_VICTRON, LOG_VERBOSE, "Victron - already connected\n");
         return true;
     } else if (!isEnabled()) {
-        printf("Victron - disabled\n");
+        logger.print(LOG_VICTRON, LOG_VERBOSE, "Victron - disabled\n");
         return false;
     }
 
-    bleManager.setPasscode(passcode);
+    //bleManager.setPasscode(passcode);
 
 //    pClient = BLEDevice::createClient();
 //    pClient->setClientCallbacks(m_ClientCallback);
 //    pClient->setClientCallbacks(new MPPTClientCallback());
 
-    printf("Victron - start connect\n");
+    logger.print(LOG_VICTRON, LOG_INFO, "Victron - start connect - %s\n", address.toString().c_str());
 
-    if (pClient->connect(address, BLE_ADDR_TYPE_PUBLIC)) {
-        printf("%s - Connected to Server\r\n", getName());
+    if (pClient->connect(address, false)) {
+        logger.print(LOG_VICTRON, LOG_INFO, "%s - Connected to Server\r\n", getName());
     } else {
-        printf("%s - Failed to connect to server\r\n", getName());
+        logger.print(LOG_VICTRON, LOG_WARNING, "%s - Failed to connect to server\r\n", getName());
         return false;
     }
 
+    pClient->secureConnection();
     
     BLERemoteService* pRemoteService = pClient->getService(getServiceUUID());
     if (pRemoteService == nullptr) {
-        printf("%s Failed to find our service UUID: %s\r\n", getName(), getServiceUUID().toString().c_str());
+        logger.print(LOG_VICTRON, LOG_WARNING, "%s Failed to find our service UUID: %s\r\n", getName(), getServiceUUID().toString().c_str());
         pClient->disconnect();
         return false;
     } else {
-        printf(" - %s Found our service\r\n", getName());
+        logger.print(LOG_VICTRON, LOG_VERBOSE, " - %s Found our service\r\n", getName());
 
         pChar1 = pRemoteService->getCharacteristic(charUUID1);
         if (pChar1 == nullptr) {
@@ -66,7 +70,8 @@ bool Victron::connectIfNecessary()
             if(pChar1->canNotify()) {
                 registerCharacteristics(pChar1, this, 1);
                 //characteristics[pChar1] = NotifyInfo(this, 1);
-                pChar1->registerForNotify(&notifyCallback);
+                pChar1->subscribe(true, &notifyCallback);
+//                pChar1->registerForNotify(&notifyCallback);
             }
         }
 
@@ -74,17 +79,16 @@ bool Victron::connectIfNecessary()
         if (pChar2) {
             if (pChar2->canNotify()) {
                 registerCharacteristics(pChar2, this, 2);
-//                characteristics[pChar2] = NotifyInfo(this, 2);
-                pChar2->registerForNotify(&notifyCallback);
+                pChar2->subscribe(true, &notifyCallback);
+//                pChar2->registerForNotify(&notifyCallback);
             }
         }
         pChar3 = pRemoteService->getCharacteristic(charUUID3);
         if (pChar3) {
             if(pChar3->canNotify()){
                 registerCharacteristics(pChar3, this, 3);
-
-//                characteristics[pChar3] = NotifyInfo(this, 3);
-                pChar3->registerForNotify(&notifyCallback);
+                pChar3->subscribe(true, &notifyCallback);
+//                pChar3->registerForNotify(&notifyCallback);
             }
 //        const uint8_t v[] = {0x1,0x0};
 
@@ -130,14 +134,17 @@ bool Victron::connectIfNecessary()
 void Victron::unregisterAll() {
     
     if (pChar1) {
+        pChar1->unsubscribe();
         unregisterCharacteristics(pChar1, this);
         pChar1 = nullptr;
     }
     if (pChar2) {
+        pChar2->unsubscribe();
         unregisterCharacteristics(pChar2, this);
         pChar2 = nullptr;
     }
     if (pChar3) {
+        pChar3->unsubscribe();
         unregisterCharacteristics(pChar3, this);
         pChar3 = nullptr;
     }
@@ -238,11 +245,11 @@ void Victron::onNotify(uint8_t index, uint8_t *pData, size_t length) {
                                 break;
 
                             default:
-                                printf("Notify %04x %d\n", vreg, value);
+                                logger.print(LOG_VICTRON, LOG_INFO, "Notify %04x %d\n", vreg, value);
                         }
                         //printf("Consume %d\n", 6 + valLength);
                         if (6 + valLength > lenNotifyBuffer) {
-                            printf("Consume too much %d> %d\n", 6 + valLength, lenNotifyBuffer);
+                            logger.print(LOG_VICTRON, LOG_WARNING, "Consume too much %d> %d\n", 6 + valLength, lenNotifyBuffer);
                         }
                         lenNotifyBuffer -= (6 + valLength);
                         memmove(pNotifyBuffer, pNotifyBuffer + 6 + valLength, lenNotifyBuffer);
@@ -253,7 +260,7 @@ void Victron::onNotify(uint8_t index, uint8_t *pData, size_t length) {
                     break;
                 }
             } else {
-                printf("Discard 1 - %02x\n", pNotifyBuffer[0]);
+                logger.print(LOG_VICTRON, LOG_VERBOSE, "Discard 1 - %02x\n", pNotifyBuffer[0]);
                 memmove(pNotifyBuffer, pNotifyBuffer + 1, --lenNotifyBuffer);
             }
         }
@@ -300,7 +307,7 @@ bool Victron::getCBOR(uint8_t startPos, uint8_t &valLength_, int32_t &value) con
         case 29:
         case 30:
         case 31:
-            printf("CBOR error (len=%d)\n", valLength);
+            logger.print(LOG_VICTRON, LOG_ERROR, "CBOR error (len=%d)\n", valLength);
             value = 0;
             valLength_ = 0;
             return true; //to get it to skip the data

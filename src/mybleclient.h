@@ -1,6 +1,7 @@
 #pragma once
 
-#include <BLEDevice.h>
+//#include <BLEDevice.h>
+#include "NimBLEDevice.h"
 
 class MyBLEClientCallback;
 
@@ -48,10 +49,17 @@ protected:
 class MyBLEClientCallback : public BLEClientCallbacks {
 public:
     MyBLEClientCallback(MyBLEClient *pClient_);
-    void onConnect(BLEClient* pclient); 
-    void onDisconnect(BLEClient* pclient);
+    void setPasscode(uint32_t p) {
+        passcode = p;
+    }
+    void onConnect(BLEClient* pclient) override; 
+    void onDisconnect(BLEClient* pclient) override;
+    uint32_t onPassKeyRequest() override;
+    void onAuthenticationComplete(ble_gap_conn_desc *desc) override;
+    bool onConfirmPIN(uint32_t pin) override;
 private:
     MyBLEClient *pClient;
+    uint32_t passcode;
 };
 
 

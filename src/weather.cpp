@@ -33,7 +33,7 @@ void Weather::getWeatherFromLocation(float lat, float lng)
       bool waiting = false;
       while(client->connected() || client->available()) {
         if (!waiting) {
-          printf("waiting\n");
+          //printf("waiting\n");
           waiting = true;
         }
         while((size = client->available()) > 0) {
@@ -42,7 +42,7 @@ void Weather::getWeatherFromLocation(float lat, float lng)
           char c = client->read();
           // printf("p: %c (%02x)\n", c, c);
           if ((c == '{') && (!inBody)) { 
-            printf("in body\n");
+            //printf("in body\n");
             inBody = true;
           }
 
@@ -71,7 +71,7 @@ void Weather::value(ElementPath path, ElementValue value) {
   char buf[200];
 
   if (path.getCount() > 1) {
-      printf("W: - %s - %s\n", path.getKey(0), path.getKey(1));
+      //printf("W: - %s - %s\n", path.getKey(0), path.getKey(1));
       if (strcmp(path.getKey(0), "current") == 0) {
         now.load(path, 1, value);
       } else if (strcmp(path.getKey(0), "hourly") == 0) {

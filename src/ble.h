@@ -3,9 +3,9 @@
 #include <vector>
 #include <cstdint>
 
-class BLEScan;
+class NimBLEScan;
 class MyBLEClient;
-class BLEAddress;
+class NimBLEAddress;
 class MySecurityCallbacks;
 
 struct RegisteredBLEClient {
@@ -22,14 +22,14 @@ public:
     void keepAlive();
 
     void addBLEClient(MyBLEClient &client);
-    void setFound(BLEAddress addr);
+    void setFound(NimBLEAddress addr);
 
     void setPasscode(uint32_t passcode);
     //bool victronSolarFound = false;
     bool scanInProgress = false;
 
 private:
-    BLEScan *pScanner = nullptr;
+    NimBLEScan *pScanner = nullptr;
     MySecurityCallbacks *pSecurityCallbacks = nullptr;
     std::vector<RegisteredBLEClient> clients; 
 };

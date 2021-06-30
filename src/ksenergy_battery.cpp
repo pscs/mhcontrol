@@ -39,7 +39,7 @@ bool KSEnergyBattery::connectIfNecessary() {
 
     printf("Battery - start connect\n");
 
-    if (pClient->connect(address, BLE_ADDR_TYPE_PUBLIC)) {
+    if (pClient->connect(address, false)) {
         printf("%s - Connected to Server\r\n", getName());
     } else {
         printf("%s - Failed to connect to server\r\n", getName());
@@ -62,7 +62,8 @@ bool KSEnergyBattery::connectIfNecessary() {
             if(pCharacteristic->canNotify()) {
                 registerCharacteristics(pCharacteristic, this, 1);
                 //characteristics[pChar1] = NotifyInfo(this, 1);
-                pCharacteristic->registerForNotify(&notifyCallback);
+                pCharacteristic->subscribe(true, &notifyCallback);
+                //pCharacteristic->registerForNotify(&notifyCallback);
             }
         }
     }
@@ -72,6 +73,8 @@ bool KSEnergyBattery::connectIfNecessary() {
 }
 
 void KSEnergyBattery::unregisterAll() {
+
+    pCharacteristic->unsubscribe();
     unregisterCharacteristics(pCharacteristic, this);
     pCharacteristic = nullptr;
 }
