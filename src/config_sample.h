@@ -1,5 +1,7 @@
 #pragma once
 
+#define SETTINGS_FILENAME "/sd/settings.ini"
+
 #define WIFI_SSID "ssid"
 #define WIFI_PASSWORD "password"
 

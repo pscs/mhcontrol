@@ -6,6 +6,7 @@
 #include "victron_B2B.h"
 #include "victron_mainscharger.h"
 #include "ksenergy_battery.h"
+#include "logger.h"
 //#include "config.h"
 
 BLEManager bleManager;
@@ -13,7 +14,7 @@ BLEManager bleManager;
 class MySecurityCallbacks: public BLESecurityCallbacks {
   public:
   uint32_t onPassKeyRequest() override {
-    printf("*********************onPasskeyrequest\n");
+    logger.print(LOG_BLE, LOG_VERBOSE, "*********************onPasskeyrequest\n");
     return passcode; //BLEPASSCODE;  
   }
   void onPassKeyNotify(uint32_t pk) override {
@@ -22,8 +23,8 @@ class MySecurityCallbacks: public BLESecurityCallbacks {
     return true;
   }
   void onAuthenticationComplete(esp_ble_auth_cmpl_t auth_cmpl) override {
-    printf("onAuthenticationComplete\n");
-    printf("pair status = %s\n", auth_cmpl.success ? "success" : "fail");
+    logger.print(LOG_BLE, LOG_VERBOSE, "onAuthenticationComplete\n");
+    logger.print(LOG_BLE, LOG_INFO, "pair status = %s\n", auth_cmpl.success ? "success" : "fail");
   }
   bool onConfirmPIN(uint32_t pin) override {
     return true;
@@ -39,7 +40,7 @@ public:
    * Called for each advertising BLE server.
    */
   void onResult(BLEAdvertisedDevice advertisedDevice) {
-    printf("BLE Advertised Device found: %s\n", advertisedDevice.toString().c_str());
+    logger.print(LOG_BLE, LOG_VERBOSE, "BLE Advertised Device found: %s\n", advertisedDevice.toString().c_str());
     pManager->setFound(advertisedDevice.getAddress());
 /*       if (advertisedDevice.getAddress() == victronSmartSolar.getAddress()) {
         printf("Found MPPT\r\n");
@@ -54,7 +55,7 @@ private:
 };
 
 void BLEScanDone(BLEScanResults) {
-    printf("BLE Scan Done\n");
+    logger.print(LOG_BLE, LOG_INFO, "BLE Scan Done\n");
 
     bleManager.scanInProgress = false;
 }
@@ -87,10 +88,10 @@ void BLEManager::initialise()
     addBLEClient(ksEnergyBattery);
 
     //victronSolarFound = false;
-    printf("Start BLE Scanner\n");
+    logger.print(LOG_BLE, LOG_INFO, "Start BLE Scanner\n");
     scanInProgress = true;
     pScanner->start(5, BLEScanDone, false);
-    printf("BLE Scanner started\n");
+    logger.print(LOG_BLE, LOG_VERBOSE, "BLE Scanner started\n");
 }
 
 void BLEManager::addBLEClient(MyBLEClient &client) {
@@ -133,7 +134,7 @@ void BLEManager::connect() {
     if (anyNotConnected) {
       scanInProgress = true;
       pScanner->start(5, BLEScanDone, false);
-      printf("BLE Scanner started\n");
+      logger.print(LOG_BLE, LOG_INFO, "BLE Scanner started\n");
     }
   }
 

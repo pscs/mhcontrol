@@ -2,6 +2,7 @@
 
 #include <HTTPClient.h>
 #include "config.h"
+#include "logger.h"
 
 Weather weather;
 
@@ -12,27 +13,36 @@ void Weather::getWeatherFromLocation(float lat, float lng)
     char buf[200];
     snprintf(buf, sizeof(buf), "http://api.openweathermap.org/data/2.5/onecall?appid=%s&lat=%s&lon=%s&exclude=minutely",
       OPENWEATHERMAPAPIKEY, String(lat, 5).c_str(), String(lng, 5).c_str());
-    printf("http request %s\n", buf);
+    logger.print(LOG_WEATHER, LOG_INFO, "http request %s\n", buf);
     http.setReuse(false);
+    http.setConnectTimeout(100);
+    http.setTimeout(1000);
     http.begin(buf);
     int httpResponseCode = http.GET();
     if (httpResponseCode == 200) {
+
+      logger.print(LOG_WEATHER, LOG_VERBOSE, "Parse HTTP response\n");
 
       JsonStreamingParser parser;
       parser.setHandler(this);
       WiFiClient *client = http.getStreamPtr();
 
-      //printf("parse HTTP response\n");
-     
       bool inBody = false;
       char lastChar = 0;
       int size;
+      bool waiting = false;
       while(client->connected() || client->available()) {
+        if (!waiting) {
+          printf("waiting\n");
+          waiting = true;
+        }
         while((size = client->available()) > 0) {
+          waiting = false;
+          //printf("q: %d\n", size);
           char c = client->read();
-           //printf("p: %c (%02x)\n", c, c);
-          if (c == '{') { 
-            //printf("in body\n");
+          // printf("p: %c (%02x)\n", c, c);
+          if ((c == '{') && (!inBody)) { 
+            printf("in body\n");
             inBody = true;
           }
 
@@ -41,13 +51,15 @@ void Weather::getWeatherFromLocation(float lat, float lng)
           } else {
             lastChar = c;
           }
-          yield();
+//          yield();
         }
+        delay(1);
+        //yield();
       }
-      printf("Weather: %d\n",now.temp);
+      logger.print(LOG_WEATHER, LOG_INFO, "Weather: %d\n",now.temp);
       loaded = true;
     } else {
-      printf("http response %d\n", httpResponseCode);
+      logger.print(LOG_WEATHER, LOG_WARNING, "http response %d\n", httpResponseCode);
     }
     http.end();
 }
@@ -59,7 +71,7 @@ void Weather::value(ElementPath path, ElementValue value) {
   char buf[200];
 
   if (path.getCount() > 1) {
-      //printf("W: - %s - %s\n", path.getKey(0), path.getKey(1));
+      printf("W: - %s - %s\n", path.getKey(0), path.getKey(1));
       if (strcmp(path.getKey(0), "current") == 0) {
         now.load(path, 1, value);
       } else if (strcmp(path.getKey(0), "hourly") == 0) {

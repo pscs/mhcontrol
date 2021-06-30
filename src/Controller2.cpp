@@ -9,6 +9,7 @@
 #include <vector>
 #include <Wire.h>
 #include "DS3231.h"
+#include <SD.h>
 
 //#define GPS_USESOFTWARESERIAL
 #ifdef GPS_USESOFTWARESERIAL
@@ -29,6 +30,9 @@
 #include "ble.h"
 #include "thingsboard.h"
 #include "config.h"
+#include "serial_terminal.h"
+#include "logger.h"
+#include "inifile.h"
 
 #define LVGL_TICK_PERIOD 60
 
@@ -60,10 +64,13 @@ static lv_color_t buf[screenWidth * 10];
 
 uint32_t wifiLastTryConnect;
 uint32_t wifiNextTryConnect;
+std::string WifiSSID;
+std::string WifiPassword;
 
 uint32_t screenTimeout = 30;
 
 DS3231 Clock;
+bool sdCardMounted = false;
 
 Scheduler ts;
 
@@ -166,7 +173,7 @@ void my_touchpad_read(lv_indev_drv_t * indev_driver, lv_indev_data_t * data)
 
 void WiFiEvent(WiFiEvent_t event)
 {
-    Serial.printf("[WiFi-event] event: %d\n", event);
+    logger.print(LOG_WIFI, LOG_VERBOSE, "[WiFi-event] event: %d", event);
 
     switch (event) {
         case ARDUINO_EVENT_WIFI_READY: 
@@ -182,13 +189,13 @@ void WiFiEvent(WiFiEvent_t event)
             Serial.println("WiFi clients stopped");
             break;
         case ARDUINO_EVENT_WIFI_STA_CONNECTED:
-            Serial.println("Connected to access point");
+            logger.print(LOG_WIFI, LOG_VERBOSE, "Connected to access point\n");
             tUpdateLocator.enableDelayed(1000);
             tUpdateTimezone.enableDelayed(2000);
             tUpdateWeather.enableDelayed(3000);
             break;
         case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-            Serial.println("Disconnected from WiFi access point");
+            logger.print(LOG_WIFI, LOG_VERBOSE, "Disconnected from WiFi access point\n");
             tUpdateLocator.disable();
             tUpdateTimezone.disable();
             tUpdateWeather.disable();
@@ -290,6 +297,7 @@ void setup() {
      gps.encode(*gpsDemoStream++);
   }
 
+  serialTerminal.initialise();
   bleManager.initialise();
 
   Wire.begin(26, 25, 100000);
@@ -299,35 +307,6 @@ void setup() {
 
   WiFi.onEvent(WiFiEvent);
 
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-
-    ArduinoOTA
-    .onStart([]() {
-      String type;
-      if (ArduinoOTA.getCommand() == U_FLASH)
-        type = "sketch";
-      else // U_SPIFFS
-        type = "filesystem";
-
-      // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
-      Serial.println("Start updating " + type);
-    })
-    .onEnd([]() {
-      Serial.println("\nEnd");
-    })
-    .onProgress([](unsigned int progress, unsigned int total) {
-      Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
-    })
-    .onError([](ota_error_t error) {
-      Serial.printf("Error[%u]: ", error);
-      if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
-      else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
-      else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
-      else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
-      else if (error == OTA_END_ERROR) Serial.println("End Failed");
-    });
-
-  ArduinoOTA.begin();
 
   // Initialise the TFT screen
 
@@ -378,6 +357,48 @@ void setup() {
   lv_disp_set_theme(disp, th); /*Assign the theme to the display*/
 
   Screen.Create(scr);
+
+  WifiSSID = WIFI_SSID;
+  WifiPassword = WIFI_PASSWORD;
+
+  if(SD.begin(32)) {
+    sdCardMounted = true;
+
+    IniFile::load(SETTINGS_FILENAME);
+  } else {
+    printf("Failed to mount SD card\n");
+  }
+
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+
+    ArduinoOTA
+    .onStart([]() {
+      String type;
+      if (ArduinoOTA.getCommand() == U_FLASH)
+        type = "sketch";
+      else // U_SPIFFS
+        type = "filesystem";
+
+      // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
+      Serial.println("Start updating " + type);
+    })
+    .onEnd([]() {
+      Serial.println("\nEnd");
+    })
+    .onProgress([](unsigned int progress, unsigned int total) {
+      Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+    })
+    .onError([](ota_error_t error) {
+      Serial.printf("Error[%u]: ", error);
+      if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
+      else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
+      else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
+      else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
+      else if (error == OTA_END_ERROR) Serial.println("End Failed");
+    });
+
+  ArduinoOTA.begin();
+
 //  createScreens(scr);
 
     /*Create a drop down list*/
@@ -416,21 +437,23 @@ void loop() {
 
   ts.execute();
 
+  serialTerminal.processData();
+
   uint32_t now = millis();
 
   if (now - wifiLastTryConnect >= wifiNextTryConnect) {
     if (WiFi.status() != WL_CONNECTED) {
       WiFi.disconnect();
-      if (!WiFi.reconnect()) {
-        printf("WiFi not connected!\r\n");
+      if (!WiFi.begin(WifiSSID.c_str(), WifiPassword.c_str())) {
+        logger.print(LOG_WIFI, LOG_WARNING, "WiFi not connected!\n");
       } else {
-        printf("WiFi connected to %s\r\n", WiFi.SSID());
+        logger.print(LOG_WIFI, LOG_INFO, "WiFi connected to %s\n", WiFi.SSID());
       }
     }
     wifiLastTryConnect = now;
     wifiNextTryConnect = 10000;
   }
-
+/*
   if (now - lastLocationUpdate > 1000) {
     lastLocationUpdate = now;
 
@@ -447,9 +470,9 @@ void loop() {
     
     //Serial1.write(gpsbuf, sizeof(gpsbuf));
     
-  }
+  }*/
 
-  }
+//  }
 
   // put your main code here, to run repeatedly:
 
@@ -547,11 +570,11 @@ void fnUpdateLocator() {
 }
 
 void fnUpdateWeather() {
-  printf("try update weather\n");
+  logger.print(LOG_WEATHER, LOG_VERBOSE, "try update weather\n");
   if ((WiFi.status() == WL_CONNECTED) && (gps.location.isValid())) {
     weather.getWeatherFromLocation(gps.location.lat(), gps.location.lng());
   } else {
-    printf("skip no data/wifi\n");
+    logger.print(LOG_WEATHER, LOG_VERBOSE, "skip no data/wifi\n");
     tUpdateWeather.restartDelayed(10000);
   }
 }

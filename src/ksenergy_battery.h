@@ -11,13 +11,20 @@ public:
 
     bool connectIfNecessary() override;
 
-    int16_t getVoltage(int index) const;
-    int16_t getCurrent(int index) const;
+    int16_t getVoltage() const {
+        return voltage;
+    }
+    int16_t getCurrent() const {
+        return current;
+    }
     int16_t getTemperature() const {
         return temperature;
     }
     uint8_t getState() const {
         return state;
+    }
+    uint8_t getSOC() const {
+        return SOC;
     }
 
     void keepAlive() override;
@@ -28,10 +35,11 @@ public:
 
 private:
     BLERemoteCharacteristic *pCharacteristic = nullptr;
-    int16_t voltage;
-    int16_t current;
+    int16_t voltage = 0;
+    int16_t current = 0;
     int16_t temperature = 0;
     uint8_t state = 0;
+    uint8_t SOC = 0;
 };
 
 extern KSEnergyBattery ksEnergyBattery;
