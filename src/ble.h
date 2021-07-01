@@ -24,8 +24,6 @@ public:
     void addBLEClient(MyBLEClient &client);
     void setFound(NimBLEAddress addr);
 
-    void setPasscode(uint32_t passcode);
-    //bool victronSolarFound = false;
     bool scanInProgress = false;
 
 private:
@@ -38,7 +36,3 @@ void BLEConnect();
 void BLEKeepAlive();
 
 extern BLEManager bleManager;
-
-/* {
-  victronSmartSolar.connectIfNecessary();
-}*/

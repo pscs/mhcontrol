@@ -34,6 +34,8 @@
 #include "logger.h"
 #include "inifile.h"
 
+#include "telnet_terminal.h"
+
 #define LVGL_TICK_PERIOD 60
 
 static const int RXPin = 39, TXPin = 33;
@@ -94,6 +96,8 @@ Task tBLEConnect(10 * 1000, -1, &BLEConnect, &ts, true);
 Task tBLEKeepAlive(5 * 1000, -1, &BLEKeepAlive, &ts, true);
 //Task tBLEKeepAlive(1 * 1000, -1, &BLEKeepAlive, &ts, true);
 Task tUpdateThingsboard(10 * 1000, -1, &updateThingsBoard, &ts, true);
+void fnFlushLogfiles();
+Task tFlushLogFiles(600 * 1000, -1, &fnFlushLogfiles, &ts, true);
 
 //------------------------------------------------------------------------------------------
 
@@ -399,6 +403,8 @@ void setup() {
 
   ArduinoOTA.begin();
 
+  telnetTerminal.initialise();
+
 //  createScreens(scr);
 
     /*Create a drop down list*/
@@ -438,6 +444,7 @@ void loop() {
   ts.execute();
 
   serialTerminal.processData();
+  telnetTerminal.processData();
 
   uint32_t now = millis();
 
@@ -581,4 +588,8 @@ void fnUpdateWeather() {
 
 void fnUpdateDisplay() {
   Screen.Update();
+}
+
+void fnFlushLogfiles() {
+  logger.flush();
 }
