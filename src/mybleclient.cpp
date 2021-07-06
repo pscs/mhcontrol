@@ -1,7 +1,9 @@
 #include "mybleclient.h"
 
 #include "logger.h"
+#include "timezone.h"
 
+char MyBLEClient::timeBuf[20];
 
 struct NotifyInfo {
     NotifyInfo(): pClient(nullptr), index(0) {}
@@ -43,23 +45,31 @@ void MyBLEClient::onDisconnect() {
 };
 
 
+const char *MyBLEClient::getLastUpdateTimeText() const {
+    time_t t = lastUpdateTime;
+    t += TZ.getOffset();
+    tm *tm = gmtime(&t);
+    strftime(timeBuf, sizeof(timeBuf), "%F %T", tm);
+
+    return timeBuf;
+}
 
 
 MyBLEClientCallback::MyBLEClientCallback(MyBLEClient *p): pClient(p) {
 }
 
 uint32_t MyBLEClientCallback::onPassKeyRequest() {
-    logger.print(LOG_BLE, LOG_INFO, "Client Passkey - %06d\n", passcode);
+    logger.printf(LOG_BLE, LOG_INFO, "Client Passkey - %06d\n", passcode);
     return passcode;
 }
 
 void MyBLEClientCallback::onAuthenticationComplete(ble_gap_conn_desc *desc) {
-    logger.print(LOG_BLE, LOG_INFO, "Client Authentication complete - %d %d %d\n", desc->sec_state.authenticated, 
+    logger.printf(LOG_BLE, LOG_INFO, "Client Authentication complete - %d %d %d\n", desc->sec_state.authenticated, 
         desc->sec_state.encrypted, desc->sec_state.bonded);
 }
 
 bool MyBLEClientCallback::onConfirmPIN(uint32_t pin) {
-    logger.print(LOG_BLE, LOG_INFO, "Client Confirm PIN - %06d\n", pin);
+    logger.printf(LOG_BLE, LOG_INFO, "Client Confirm PIN - %06d\n", pin);
     return true;
 }
 
@@ -74,6 +84,7 @@ void unregisterCharacteristics(BLERemoteCharacteristic *pBLERemoteCharacteristic
 
 void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic, uint8_t* pData, size_t length, bool isNotify) {
     auto it = characteristics.find(pBLERemoteCharacteristic);
+    //printf("BLE notify\n");
     if ((it != characteristics.end()) && (it->second.pClient)) {
         it->second.pClient->onNotify(it->second.index, pData, length);
     }

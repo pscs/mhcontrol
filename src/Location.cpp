@@ -7,6 +7,8 @@
 #include "Controller.h"
 #include "locator.h"
 
+#include "logger.h"
+
 TinyGPSPlus gps;
 LocationScreen Location;
 
@@ -108,11 +110,11 @@ void LocationScreen::Update()
         .tm_mon = gps.date.month() - 1,
         .tm_year = gps.date.year() - 1900
       };
-      printf("GPSTime %d %d %d %d %d %d\n", gpsTm.tm_year, gpsTm.tm_mon, gpsTm.tm_mday, gpsTm.tm_hour, gpsTm.tm_min, gpsTm.tm_sec);
+      logger.printf(LOG_GPS, LOG_DEBUG, "GPSTime %d %d %d %d %d %d\n", gpsTm.tm_year, gpsTm.tm_mon, gpsTm.tm_mday, gpsTm.tm_hour, gpsTm.tm_min, gpsTm.tm_sec);
       time_t gpsTime = mktime(&gpsTm);// + gps.date.age();
 
       time_t clockTime = Clock.Get();
-      printf("RTC = %lu GPS = %lu\n", (long)clockTime, (long)gpsTime);
+      logger.printf(LOG_GPS, LOG_DEBUG, "RTC = %lu GPS = %lu\n", (long)clockTime, (long)gpsTime);
       if (abs(gpsTime - clockTime) > 10000) {
         Clock.Set(gpsTime);
       }

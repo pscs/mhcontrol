@@ -52,7 +52,7 @@ void PowerScreen::Create(lv_obj_t *scr)
 }
 
 void PowerScreen::Update() {
-  if (victronSmartSolar.isConnected()) {
+  if (victronSmartSolar.isConnected() || victronSmartSolar.isDemoMode()) {
     lv_label_set_text_fmt(solarIn, "%dV %dA %dW", victronSmartSolar.getVoltage(0), victronSmartSolar.getCurrent(0), victronSmartSolar.getPower(0));
     lv_label_set_text_fmt(solarOut, "%dV %dA %d %dC", victronSmartSolar.getVoltage(1), victronSmartSolar.getCurrent(1), victronSmartSolar.getState(),
         victronSmartSolar.getTemperature());
@@ -61,22 +61,24 @@ void PowerScreen::Update() {
     lv_label_set_text(solarOut, "not connected");
   }
 
-  if (victronB2B.isConnected()) {
+  if (victronB2B.isConnected() || victronB2B.isDemoMode()) {
     lv_label_set_text_fmt(b2b, "%dV %dV %d %dC", victronB2B.getVoltage(0), victronB2B.getVoltage(1), victronB2B.getState(),
         victronB2B.getTemperature());
   } else {
     lv_label_set_text(b2b, "not connected");
   }
 
-  if (victronMainsCharger.isConnected()) {
+  if (victronMainsCharger.isConnected() || victronMainsCharger.isDemoMode()) {
     lv_label_set_text_fmt(mains, "%dV %dA %dW %d %C", victronMainsCharger.getVoltage(0), victronMainsCharger.getCurrent(0), 
         victronMainsCharger.getPower(0), victronMainsCharger.getState(), victronMainsCharger.getTemperature());
   } else {
     lv_label_set_text(mains, "not connected");  }
 
   if (ksEnergyBattery.isConnected()) {
-    lv_label_set_text_fmt(battery, "%dV %dA %d%% %d %dC", ksEnergyBattery.getVoltage(), ksEnergyBattery.getCurrent(), 
-      ksEnergyBattery.getSOC(), ksEnergyBattery.getState(), ksEnergyBattery.getTemperature());
+    char buf[100];
+    snprintf(buf, sizeof(buf), "%.2fV %.2fA %d%% %d %dC", ksEnergyBattery.getVoltage() / 1000.0, ksEnergyBattery.getCurrent() / 1000.0, 
+      ksEnergyBattery.getSOC(), ksEnergyBattery.getState(), ksEnergyBattery.getTemperature() - 40);
+    lv_label_set_text(battery, buf);
   } else {
     lv_label_set_text(battery, "not connected");
   }

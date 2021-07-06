@@ -10,6 +10,8 @@ public:
 
   time_t Get() const;
   void Set(time_t t);
+
+  const char *getTimeText(time_t t);
   
 private:
   static uint8_t Bcd2Dec(uint8_t a);

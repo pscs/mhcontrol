@@ -13,7 +13,7 @@ void Weather::getWeatherFromLocation(float lat, float lng)
     char buf[200];
     snprintf(buf, sizeof(buf), "http://api.openweathermap.org/data/2.5/onecall?appid=%s&lat=%s&lon=%s&exclude=minutely",
       OPENWEATHERMAPAPIKEY, String(lat, 5).c_str(), String(lng, 5).c_str());
-    logger.print(LOG_WEATHER, LOG_INFO, "http request %s\n", buf);
+    logger.printf(LOG_WEATHER, LOG_INFO, "http request %s\n", buf);
     http.setReuse(false);
     http.setConnectTimeout(100);
     http.setTimeout(1000);
@@ -21,7 +21,7 @@ void Weather::getWeatherFromLocation(float lat, float lng)
     int httpResponseCode = http.GET();
     if (httpResponseCode == 200) {
 
-      logger.print(LOG_WEATHER, LOG_VERBOSE, "Parse HTTP response\n");
+      logger.send(LOG_WEATHER, LOG_VERBOSE, "Parse HTTP response\n");
 
       JsonStreamingParser parser;
       parser.setHandler(this);
@@ -56,10 +56,10 @@ void Weather::getWeatherFromLocation(float lat, float lng)
         delay(1);
         //yield();
       }
-      logger.print(LOG_WEATHER, LOG_INFO, "Weather: %d\n",now.temp);
+      logger.printf(LOG_WEATHER, LOG_INFO, "Weather: %d\n",now.temp);
       loaded = true;
     } else {
-      logger.print(LOG_WEATHER, LOG_WARNING, "http response %d\n", httpResponseCode);
+      logger.printf(LOG_WEATHER, LOG_WARNING, "http response %d\n", httpResponseCode);
     }
     http.end();
 }

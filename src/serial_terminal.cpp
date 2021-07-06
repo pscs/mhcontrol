@@ -22,3 +22,13 @@ void SerialTerminal::internalSend(const char *buffer) {
 char SerialTerminal::getType() const {
     return 'S';
 }
+
+void SerialTerminal::setMonitoring(bool m) const {
+    logger.setSerialOut(m);
+}
+
+bool SerialTerminal::getMonitoring() const {
+    return logger.getSerialOut();
+}
+
+

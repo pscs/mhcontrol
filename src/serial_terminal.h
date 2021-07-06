@@ -9,6 +9,9 @@ public:
     void internalSend(const char *str) override;
     char getType() const override;
 
+    void setMonitoring(bool m) const override;
+    bool getMonitoring() const override;;
+
 private:
 };
 

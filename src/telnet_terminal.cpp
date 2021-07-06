@@ -33,11 +33,11 @@ void TelnetTerminal::processData() {
                     if ((!password.empty()) && (password == buffer)) {
                         needsAuthentication = false;
                         loginAttempts = 0;
-                        print("Login successful\r\n\r\n");
+                        print("\x1b[mLogin successful\r\n\r\n");
                         print(getPrompt());
-                        auditLogger.print(LOG_TERMINAL, LOG_SECURITY, "Successful telnet login from %s\n",
+                        auditLogger.printf(LOG_TERMINAL, LOG_SECURITY, "Successful telnet login from %s\n",
                             client.remoteIP().toString().c_str());
-                        logger.print(LOG_TERMINAL, LOG_SECURITY, "Successful telnet login from %s\n",
+                        logger.printf(LOG_TERMINAL, LOG_SECURITY, "Successful telnet login from %s\n",
                             client.remoteIP().toString().c_str());
                     } else {
                         switch (++loginAttempts) {
@@ -58,10 +58,10 @@ void TelnetTerminal::processData() {
                                 connectionBlock = 300;
                                 break;
                         }
-                        printf("Login failed - wait %d seconds before reconnecting\r\n", connectionBlock);
-                        logger.print(LOG_TERMINAL, LOG_SECURITY, "Failed telnet login from %s\n",
+                        printf("\x1b[1;31mLogin failed - wait %d seconds before reconnecting\x1b[m\r\n", connectionBlock);
+                        logger.printf(LOG_TERMINAL, LOG_SECURITY, "Failed telnet login from %s\n",
                             client.remoteIP().toString().c_str());
-                        auditLogger.print(LOG_TERMINAL, LOG_SECURITY, "Failed telnet login from %s\n",
+                        auditLogger.printf(LOG_TERMINAL, LOG_SECURITY, "Failed telnet login from %s\n",
                             client.remoteIP().toString().c_str());
                         client.stop();
                         lastConnection = millis();
@@ -71,11 +71,13 @@ void TelnetTerminal::processData() {
                     if (bufferUsed > 0) {
                         --bufferUsed;
                     }
+                    printPasswordPrompt(bufferUsed);
+
                 } else if (ch >= 32) {
                     if (bufferUsed < bufferSize - 1) {
                         buffer[bufferUsed++] = ch;
                     }
-                    print("\x08*");
+                    printPasswordPrompt(bufferUsed);
                 }
             }
 
@@ -90,9 +92,10 @@ void TelnetTerminal::processData() {
         }
 
     } else if (TELNET_PORT != 0) {
-        if (isConnected) {
-            logger.print(LOG_TERMINAL, LOG_INFO, "Telnet client disconnected\n");
-            isConnected = false;
+        if (connected) {
+            logger.send(LOG_TERMINAL, LOG_INFO, "Telnet client disconnected\n");
+            connected = false;
+            logger.setTelnetOut(false);
         }
         if (server.hasClient()) {
 
@@ -104,15 +107,25 @@ void TelnetTerminal::processData() {
                 client = server.available();
                 client.setNoDelay(true);
                 client.flush();
-                logger.print(LOG_TERMINAL, LOG_INFO, "Telnet client connected\n");
-                isConnected = true;
+                logger.send(LOG_TERMINAL, LOG_INFO, "Telnet client connected\n");
+                connected = true;
                 needsAuthentication = true;
                 bufferUsed = 0;
 
-                client.print("Password: ");
+                printPasswordPrompt(0);
             }
         }
     }
+}
+
+void TelnetTerminal::printPasswordPrompt(int len) {
+    char buf[21];
+    if (len > sizeof(buf) - 1) {
+        len = sizeof(buf) - 1;
+    }
+    memset(buf, '*', len);
+    buf[len] = 0;
+    printf("\r\x1b[m\x1b[1;31mPassword: \x1b[m\x1b[0K%s\x1b[2;41;31m\x1b[1;%dH", buf, len + 11);
 }
 
 char TelnetTerminal::getType() const {
@@ -121,4 +134,12 @@ char TelnetTerminal::getType() const {
 
 void TelnetTerminal::doQuit() {
     client.stop();
+}
+
+void TelnetTerminal::setMonitoring(bool m) const {
+    logger.setTelnetOut(m);
+}
+
+bool TelnetTerminal::getMonitoring() const {
+    return logger.getTelnetOut();
 }

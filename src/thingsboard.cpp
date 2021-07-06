@@ -14,41 +14,52 @@ void updateThingsBoard() {
     if (WiFi.status() != WL_CONNECTED) {
         return;
     }
+    return;
 
-    logger.print(LOG_THINGSBOARD, LOG_VERBOSE, "Update Thingsboard\n");
+    logger.send(LOG_THINGSBOARD, LOG_VERBOSE, "Update Thingsboard\n");
 
-    MyBuffer json(1000); 
+    //MyBuffer json(1000); 
 
     HTTPClient http;
     char server[200];
 
+    char json[1000];
+
 
     
-    logger.print(LOG_THINGSBOARD, LOG_DEBUG, "Update Thingsboard2\n");
+    logger.send(LOG_THINGSBOARD, LOG_DEBUG, "Update Thingsboard2\n");
     if (gps.location.isValid()) {
         snprintf(server, sizeof(server), "%s/api/v1/%s/telemetry",
             THINGSBOARDURL, THINGSBOARDAPIKEY);
-        snprintf(json.getString(), json.getSize(), "{\"lat\":%s,\"lng\":%s}", 
+        logger.send(LOG_THINGSBOARD, LOG_DEBUG, "Update Thingsboard 2a\n");
+        snprintf(json, sizeof(json), "{\"lat\":%s,\"lng\":%s}", 
             String(gps.location.lat(), 5).c_str(), String(gps.location.lng(), 5).c_str());
+        logger.send(LOG_THINGSBOARD, LOG_DEBUG, "Update Thingsboard 2b\n");
         http.begin(server);
         http.addHeader("Content-Type", "application/json");
-        int httpResponseCode = http.POST(json.getString());
+        logger.send(LOG_THINGSBOARD, LOG_DEBUG, "Update Thingsboard 2m\n");
+        logger.printf(LOG_THINGSBOARD, LOG_DEBUG, "%s\n", server);
+        logger.printf(LOG_THINGSBOARD, LOG_DEBUG, "%s\n", json);
+        logger.send(LOG_THINGSBOARD, LOG_DEBUG, "Update Thingsboard 2n\n");
+        int httpResponseCode = http.POST(json);
+        logger.send(LOG_THINGSBOARD, LOG_DEBUG, "Update Thingsboard 2o\n");
+
         http.end();
     }
-        logger.print(LOG_THINGSBOARD, LOG_DEBUG, "Update Thingsboard3\n");
+        logger.send(LOG_THINGSBOARD, LOG_DEBUG, "Update Thingsboard3\n");
 
     if (victronSmartSolar.isConnected()) {
         snprintf(server, sizeof(server), "%s/api/v1/%s/telemetry",
             THINGSBOARDURL, THINGSBOARDSOLARAPIKEY);
 
-        snprintf(json.getString(), json.getSize(), "{\"v0\":%d,\"v1\":%d, \"p0\":%d,\"p1\":%d,\"i0\":%d,\"i1\":%d,\"st\":%d,\"temp\":%d}", 
+        snprintf(json, sizeof(json), "{\"v0\":%d,\"v1\":%d, \"p0\":%d,\"p1\":%d,\"i0\":%d,\"i1\":%d,\"st\":%d,\"temp\":%d}", 
             victronSmartSolar.getVoltage(0), victronSmartSolar.getVoltage(1),
             victronSmartSolar.getPower(0),victronSmartSolar.getPower(1),
             victronSmartSolar.getCurrent(0),victronSmartSolar.getCurrent(1),
             victronSmartSolar.getState(), victronSmartSolar.getTemperature());
         http.begin(server);
         http.addHeader("Content-Type", "application/json");
-        int httpResponseCode = http.POST(json.getString());
+        int httpResponseCode = http.POST(json);
         http.end();
     }
 
@@ -56,14 +67,14 @@ void updateThingsBoard() {
         snprintf(server, sizeof(server), "%s/api/v1/%s/telemetry",
             THINGSBOARDURL, THINGSBOARDB2BAPIKEY);
 
-        snprintf(json.getString(), json.getSize(), "{\"v0\":%d,\"v1\":%d, \"p0\":%d,\"p1\":%d,\"i0\":%d,\"i1\":%d,\"st\":%d,\"temp\":%d}", 
+        snprintf(json, sizeof(json), "{\"v0\":%d,\"v1\":%d, \"p0\":%d,\"p1\":%d,\"i0\":%d,\"i1\":%d,\"st\":%d,\"temp\":%d}", 
             victronB2B.getVoltage(0), victronB2B.getVoltage(1),
             victronB2B.getPower(0),victronB2B.getPower(1),
             victronB2B.getCurrent(0),victronB2B.getCurrent(1),
             victronB2B.getState(), victronB2B.getTemperature());
         http.begin(server);
         http.addHeader("Content-Type", "application/json");
-        int httpResponseCode = http.POST(json.getString());
+        int httpResponseCode = http.POST(json);
         http.end();
     }
 
@@ -71,14 +82,14 @@ void updateThingsBoard() {
         snprintf(server, sizeof(server), "%s/api/v1/%s/telemetry",
             THINGSBOARDURL, THINGSBOARDMAINSAPIKEY);
 
-        snprintf(json.getString(), json.getSize(), "{\"v0\":%d,\"v1\":%d, \"p0\":%d,\"p1\":%d,\"i0\":%d,\"i1\":%d,\"st\":%d,\"temp\":%d}", 
+        snprintf(json, sizeof(json), "{\"v0\":%d,\"v1\":%d, \"p0\":%d,\"p1\":%d,\"i0\":%d,\"i1\":%d,\"st\":%d,\"temp\":%d}", 
             victronMainsCharger.getVoltage(0), victronMainsCharger.getVoltage(1),
             victronMainsCharger.getPower(0),victronMainsCharger.getPower(1),
             victronMainsCharger.getCurrent(0),victronMainsCharger.getCurrent(1),
             victronMainsCharger.getState(), victronMainsCharger.getTemperature());
         http.begin(server);
         http.addHeader("Content-Type", "application/json");
-        int httpResponseCode = http.POST(json.getString());
+        int httpResponseCode = http.POST(json);
         http.end();
     }
 
@@ -86,13 +97,13 @@ void updateThingsBoard() {
         snprintf(server, sizeof(server), "%s/api/v1/%s/telemetry",
             THINGSBOARDURL, THINGSBOARDBATTERYAPIKEY);
 
-        snprintf(json.getString(), json.getSize(), "{\"v\":%d,\"i\":%d,\"soc\":%d,\"st\":%d,\"temp\":%d}", 
+        snprintf(json, sizeof(json), "{\"v\":%d,\"i\":%d,\"soc\":%d,\"st\":%d,\"temp\":%d}", 
             ksEnergyBattery.getVoltage(), 
             ksEnergyBattery.getCurrent(), ksEnergyBattery.getSOC(),
             ksEnergyBattery.getState(), ksEnergyBattery.getTemperature());
         http.begin(server);
         http.addHeader("Content-Type", "application/json");
-        int httpResponseCode = http.POST(json.getString());
+        int httpResponseCode = http.POST(json);
         http.end();
     }
 

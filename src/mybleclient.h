@@ -2,6 +2,7 @@
 
 //#include <BLEDevice.h>
 #include "NimBLEDevice.h"
+#include <time.h>
 
 class MyBLEClientCallback;
 
@@ -29,12 +30,19 @@ public:
     }
     virtual const char *getName() const = 0;
 
-    void enable(bool e);
+    void enable(bool e) {
+        enabled = e;
+    }
     virtual void keepAlive() = 0;
+    time_t getLastUpdateTime() {
+        return lastUpdateTime;
+    }
+    const char *getLastUpdateTimeText() const;
 
 protected:
     BLEClient *pClient = nullptr;
     MyBLEClientCallback *pClientCallback = nullptr;
+    time_t lastUpdateTime = 0;
 
     uint8_t *pNotifyBuffer = nullptr;
     uint8_t lenNotifyBuffer;
@@ -43,6 +51,8 @@ protected:
     uint32_t passcode;
     bool enabled = true;
     bool connected = false;
+
+    static char timeBuf[];
 
 };
 

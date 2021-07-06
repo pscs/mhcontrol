@@ -4,6 +4,7 @@
 #include "ble.h"
 
 #include "logger.h"
+#include "DS3231.h"
 
 static const BLEUUID generalServiceUUID("306b0001-b081-4037-83dc-e59fcc3cdfd0");
 static const BLEUUID charUUID1("306b0002-b081-4037-83dc-e59fcc3cdfd0");
@@ -18,7 +19,7 @@ Victron::Victron(const char *addr, uint32_t passcode): MyBLEClient(addr, true, p
 }
 
 Victron::~Victron() {
-    logger.print(LOG_VICTRON, LOG_DEBUG, "Victron - destructor\n");
+    logger.send(LOG_VICTRON, LOG_DEBUG, "Victron - destructor\n");
     unregisterAll();
 }
 
@@ -27,12 +28,12 @@ bool Victron::connectIfNecessary()
     if (!pNotifyBuffer) {
         pNotifyBuffer = reinterpret_cast<uint8_t *>(ps_malloc(NotifyBufferSize));
     }
-    logger.print(LOG_VICTRON, LOG_INFO, "Victron - try connect\n");
-    if (isConnected()) {
-        logger.print(LOG_VICTRON, LOG_VERBOSE, "Victron - already connected\n");
+    logger.send(LOG_VICTRON, LOG_INFO, "Victron - try connect\n");
+    if (isConnected() || demoMode) {
+        logger.send(LOG_VICTRON, LOG_VERBOSE, "Victron - already connected\n");
         return true;
     } else if (!isEnabled()) {
-        logger.print(LOG_VICTRON, LOG_VERBOSE, "Victron - disabled\n");
+        logger.send(LOG_VICTRON, LOG_VERBOSE, "Victron - disabled\n");
         return false;
     }
 
@@ -42,12 +43,12 @@ bool Victron::connectIfNecessary()
 //    pClient->setClientCallbacks(m_ClientCallback);
 //    pClient->setClientCallbacks(new MPPTClientCallback());
 
-    logger.print(LOG_VICTRON, LOG_INFO, "Victron - start connect - %s\n", address.toString().c_str());
+    logger.printf(LOG_VICTRON, LOG_INFO, "Victron - start connect - %s\n", address.toString().c_str());
 
     if (pClient->connect(address, false)) {
-        logger.print(LOG_VICTRON, LOG_INFO, "%s - Connected to Server\r\n", getName());
+        logger.printf(LOG_VICTRON, LOG_INFO, "%s - Connected to Server\r\n", getName());
     } else {
-        logger.print(LOG_VICTRON, LOG_WARNING, "%s - Failed to connect to server\r\n", getName());
+        logger.printf(LOG_VICTRON, LOG_WARNING, "%s - Failed to connect to server\r\n", getName());
         return false;
     }
 
@@ -55,11 +56,11 @@ bool Victron::connectIfNecessary()
     
     BLERemoteService* pRemoteService = pClient->getService(getServiceUUID());
     if (pRemoteService == nullptr) {
-        logger.print(LOG_VICTRON, LOG_WARNING, "%s Failed to find our service UUID: %s\r\n", getName(), getServiceUUID().toString().c_str());
+        logger.printf(LOG_VICTRON, LOG_WARNING, "%s Failed to find our service UUID: %s\r\n", getName(), getServiceUUID().toString().c_str());
         pClient->disconnect();
         return false;
     } else {
-        logger.print(LOG_VICTRON, LOG_VERBOSE, " - %s Found our service\r\n", getName());
+        logger.printf(LOG_VICTRON, LOG_VERBOSE, " - %s Found our service\r\n", getName());
 
         pChar1 = pRemoteService->getCharacteristic(charUUID1);
         if (pChar1 == nullptr) {
@@ -204,7 +205,7 @@ void Victron::onNotify(uint8_t index, uint8_t *pData, size_t length) {
                     uint8_t valLength; 
                     if (getCBOR(5, valLength, value)) {
                         //printf("Notify %04x %d\n", vreg, value);
-
+                        lastUpdateTime = Clock.Get();
                         switch(vreg) {
                             case 0x0200:
                             case 0x0202:
@@ -245,11 +246,11 @@ void Victron::onNotify(uint8_t index, uint8_t *pData, size_t length) {
                                 break;
 
                             default:
-                                logger.print(LOG_VICTRON, LOG_INFO, "Notify %04x %d\n", vreg, value);
+                                logger.printf(LOG_VICTRON, LOG_INFO, "Notify %04x %d\n", vreg, value);
                         }
                         //printf("Consume %d\n", 6 + valLength);
                         if (6 + valLength > lenNotifyBuffer) {
-                            logger.print(LOG_VICTRON, LOG_WARNING, "Consume too much %d> %d\n", 6 + valLength, lenNotifyBuffer);
+                            logger.printf(LOG_VICTRON, LOG_WARNING, "Consume too much %d> %d\n", 6 + valLength, lenNotifyBuffer);
                         }
                         lenNotifyBuffer -= (6 + valLength);
                         memmove(pNotifyBuffer, pNotifyBuffer + 6 + valLength, lenNotifyBuffer);
@@ -260,7 +261,7 @@ void Victron::onNotify(uint8_t index, uint8_t *pData, size_t length) {
                     break;
                 }
             } else {
-                logger.print(LOG_VICTRON, LOG_VERBOSE, "Discard 1 - %02x\n", pNotifyBuffer[0]);
+                logger.printf(LOG_VICTRON, LOG_VERBOSE, "Discard 1 - %02x\n", pNotifyBuffer[0]);
                 memmove(pNotifyBuffer, pNotifyBuffer + 1, --lenNotifyBuffer);
             }
         }
@@ -307,7 +308,7 @@ bool Victron::getCBOR(uint8_t startPos, uint8_t &valLength_, int32_t &value) con
         case 29:
         case 30:
         case 31:
-            logger.print(LOG_VICTRON, LOG_ERROR, "CBOR error (len=%d)\n", valLength);
+            logger.printf(LOG_VICTRON, LOG_ERROR, "CBOR error (len=%d)\n", valLength);
             value = 0;
             valLength_ = 0;
             return true; //to get it to skip the data
@@ -358,6 +359,18 @@ uint32_t Victron::getPower(int index) const {
         return power[index];
     }
 }
+
+void Victron::setDemoData(int16_t v1, int16_t v2, int16_t i1, int16_t i2, uint32_t p1, uint32_t p2, int16_t t, uint8_t s) {
+    voltage[0] = v1;
+    voltage[1] = v2;
+    current[0] = i1;
+    current[1] = i2;
+    power[0] = p1;
+    power[1] = p2;
+    temperature = t;
+    state = s;
+}
+
 
 #if 0
 

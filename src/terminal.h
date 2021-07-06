@@ -1,6 +1,12 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
+
+namespace fs {
+    class File;
+}
+using fs::File;
 
 class Terminal {
 public:
@@ -19,9 +25,13 @@ public:
 
     virtual void processCommand(char *cmd);
     virtual char getType() const = 0;
+    virtual void setMonitoring(bool m) const = 0;
+    virtual bool getMonitoring() const = 0;
 
     void doDir(const char *param);
     void doCat(const char *param);
+    void doTail(const char *param, int lines);
+    void doDelete(const char *param);
 
     virtual const char *getPrompt() const {
         return "";
@@ -29,7 +39,11 @@ public:
     virtual void doQuit() {
     }
 protected:
+    static std::string getNormalisedFilename(const char *filename);
+    void dumpFile(File &file, uint32_t startPos);
+
     char *buffer = nullptr;
+    char *lastCmd = nullptr;
     uint16_t bufferSize = 0;
     uint16_t bufferUsed = 0;
     char *sendBuffer = nullptr;

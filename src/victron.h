@@ -31,6 +31,13 @@ public:
 
     void keepAlive() override;
     virtual BLEUUID getServiceUUID() const;
+    void setDemoMode(bool d) {
+        demoMode = d;
+    }
+    bool isDemoMode() const {
+        return demoMode;
+    }
+    void setDemoData(int16_t v1, int16_t v2, int16_t i1, int16_t i2, uint32_t p1, uint32_t p2, int16_t t, uint8_t s);
 
     void unregisterAll() override;
 
@@ -47,4 +54,5 @@ private:
     uint32_t power[2];
     int16_t temperature = 0;
     uint8_t state = 0;
+    bool demoMode = false;
 };

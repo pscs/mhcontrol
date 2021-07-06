@@ -51,7 +51,7 @@ const char *gpsDemoStream =
   "$GPRMC,045251.000,A,3014.4275,N,09749.0626,W,0.51,217.94,030913,,,A*7D\r\n"
   "$GPGGA,045252.000,3014.4273,N,09749.0628,W,1,09,1.3,206.9,M,-22.5,M,,0000*6F\r\n";
 
-const bool gpsDemoMode = true;
+bool gpsDemoMode = false;
 
 #ifdef GPS_USESOFTWARESERIAL
 // The serial connection to the GPS device
@@ -177,7 +177,7 @@ void my_touchpad_read(lv_indev_drv_t * indev_driver, lv_indev_data_t * data)
 
 void WiFiEvent(WiFiEvent_t event)
 {
-    logger.print(LOG_WIFI, LOG_VERBOSE, "[WiFi-event] event: %d\n", event);
+    logger.printf(LOG_WIFI, LOG_VERBOSE, "[WiFi-event] event: %d\n", event);
 
     switch (event) {
         case ARDUINO_EVENT_WIFI_READY: 
@@ -193,13 +193,13 @@ void WiFiEvent(WiFiEvent_t event)
             Serial.println("WiFi clients stopped");
             break;
         case ARDUINO_EVENT_WIFI_STA_CONNECTED:
-            logger.print(LOG_WIFI, LOG_VERBOSE, "Connected to access point\n");
+            logger.send(LOG_WIFI, LOG_VERBOSE, "Connected to access point\n");
             tUpdateLocator.enableDelayed(1000);
             tUpdateTimezone.enableDelayed(2000);
             tUpdateWeather.enableDelayed(3000);
             break;
         case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-            logger.print(LOG_WIFI, LOG_VERBOSE, "Disconnected from WiFi access point\n");
+            logger.send(LOG_WIFI, LOG_VERBOSE, "Disconnected from WiFi access point\n");
             tUpdateLocator.disable();
             tUpdateTimezone.disable();
             tUpdateWeather.disable();
@@ -365,7 +365,7 @@ void setup() {
   WifiSSID = WIFI_SSID;
   WifiPassword = WIFI_PASSWORD;
 
-  if(SD.begin(32)) {
+  if(SD.begin(32, SPI, 100000)) {
     sdCardMounted = true;
 
     IniFile::load(SETTINGS_FILENAME);
@@ -452,9 +452,9 @@ void loop() {
     if (WiFi.status() != WL_CONNECTED) {
       WiFi.disconnect();
       if (!WiFi.begin(WifiSSID.c_str(), WifiPassword.c_str())) {
-        logger.print(LOG_WIFI, LOG_WARNING, "WiFi not connected!\n");
+        logger.send(LOG_WIFI, LOG_WARNING, "WiFi not connected!\n");
       } else {
-        logger.print(LOG_WIFI, LOG_INFO, "WiFi connected to %s\n", WiFi.SSID());
+        logger.printf(LOG_WIFI, LOG_INFO, "WiFi connected to %s\n", WiFi.SSID());
       }
     }
     wifiLastTryConnect = now;
@@ -555,33 +555,33 @@ void fnFeedGPS() {
 }
 
 void fnUpdateTimezone() {
-  printf("try update timezone\n");
+  logger.send(LOG_RTC, LOG_VERBOSE, "try update timezone\n");
   if ((WiFi.status() == WL_CONNECTED) && (gps.location.isValid())) {
 	  
     TZ.getTimezoneFromLocation(gps.location.lat(), gps.location.lng());
   } else {
-    printf("skip no data/wifi\n");
+    logger.send(LOG_RTC, LOG_VERBOSE, "skip no data/wifi\n");
     tUpdateTimezone.restartDelayed(10000);
   }
 }
 
 void fnUpdateLocator() {
-  printf("try update locator\n");
+  logger.send(LOG_GPS, LOG_INFO, "try update locator\n");
   if ((WiFi.status() == WL_CONNECTED) && (gps.location.isValid())) {
 	  
     locator.getAddressFromLocation(gps.location.lat(), gps.location.lng());
   } else {
-    printf("skip no data/wifi\n");
+    logger.send(LOG_GPS, LOG_INFO, "skip no data/wifi\n");
     tUpdateLocator.restartDelayed(10000);
   }
 }
 
 void fnUpdateWeather() {
-  logger.print(LOG_WEATHER, LOG_VERBOSE, "try update weather\n");
+  logger.send(LOG_WEATHER, LOG_VERBOSE, "try update weather\n");
   if ((WiFi.status() == WL_CONNECTED) && (gps.location.isValid())) {
     weather.getWeatherFromLocation(gps.location.lat(), gps.location.lng());
   } else {
-    logger.print(LOG_WEATHER, LOG_VERBOSE, "skip no data/wifi\n");
+    logger.send(LOG_WEATHER, LOG_VERBOSE, "skip no data/wifi\n");
     tUpdateWeather.restartDelayed(10000);
   }
 }
