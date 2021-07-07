@@ -2,6 +2,8 @@
 
 #include <Wire.h>
 
+#include "logger.h"
+
 DS3231::DS3231(uint8_t addr) : m_addr(addr)
 {
 }
@@ -30,7 +32,7 @@ time_t DS3231::Get() const
 
   for (int i = 0; i < 7; i++) {
     uint8_t x = Wire.read();
-    printf("ClockData %d - %d %02x\n", i, x, x);
+    logger.printf(LOG_RTC, LOG_DEBUG, "ClockData %d - %d %02x\n", i, x, x);
     uint8_t xx = Bcd2Dec(x);
     switch(i) {
       case 0:
@@ -65,11 +67,11 @@ void DS3231::Set(time_t t)
 {
   tm *tmInfo = gmtime(&t);
 
-  printf("RTC Set - %d %d %d %d %d %d %d\n", tmInfo->tm_sec, tmInfo->tm_min, tmInfo->tm_hour, tmInfo->tm_wday + 1, tmInfo->tm_mday, tmInfo->tm_mon + 1, tmInfo->tm_year - 100);
+  logger.printf(LOG_RTC, LOG_INFO, "RTC Set - %d %d %d %d %d %d %d\n", tmInfo->tm_sec, tmInfo->tm_min, tmInfo->tm_hour, tmInfo->tm_wday + 1, tmInfo->tm_mday, tmInfo->tm_mon + 1, tmInfo->tm_year - 100);
 
   Wire.beginTransmission(m_addr);
   Wire.write(0);
-  printf("Sec = %d -> %d %02x\n", tmInfo->tm_sec, Dec2Bcd(tmInfo->tm_sec), Dec2Bcd(tmInfo->tm_sec));
+  logger.printf(LOG_RTC, LOG_DEBUG, "Sec = %d -> %d %02x\n", tmInfo->tm_sec, Dec2Bcd(tmInfo->tm_sec), Dec2Bcd(tmInfo->tm_sec));
   Wire.write(Dec2Bcd(tmInfo->tm_sec));
   Wire.write(Dec2Bcd(tmInfo->tm_min));
   Wire.write(Dec2Bcd(tmInfo->tm_hour));

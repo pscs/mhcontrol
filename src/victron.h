@@ -43,7 +43,9 @@ public:
 
     void onNotify(uint8_t index, uint8_t* pData, size_t length) override;
 
-private:
+protected:
+    virtual void askForInitialValues() = 0;
+
     bool getCBOR(uint8_t startPos, uint8_t &valLength, int32_t &value) const;
 
     BLERemoteCharacteristic *pChar1 = nullptr;

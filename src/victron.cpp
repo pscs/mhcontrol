@@ -5,6 +5,9 @@
 
 #include "logger.h"
 #include "DS3231.h"
+/*
+https://github.com/Olen/VictronConnect/issues/2
+*/
 
 static const BLEUUID generalServiceUUID("306b0001-b081-4037-83dc-e59fcc3cdfd0");
 static const BLEUUID charUUID1("306b0002-b081-4037-83dc-e59fcc3cdfd0");
@@ -122,9 +125,10 @@ bool Victron::connectIfNecessary()
             const uint8_t v8[] = {0x3f, 0x05, 0x00, 0x81, 0x19, 0xec, 0x12};
             pChar2->writeValue((uint8_t*)v7, sizeof(v7), false);
 
-            const uint8_t v9[] = {0x05, 0x03, 0x81, 0x19, 0x02, 0x01, 0x05, 0x03, 0x81, 0x19, 0xed, 0xdb};
-            pChar3->writeValue((uint8_t*)v9, sizeof(v9), false);
+//            const uint8_t v9[] = {0x05, 0x03, 0x81, 0x19, 0x02, 0x01, 0x05, 0x03, 0x81, 0x19, 0xed, 0xdb};
+//            pChar3->writeValue((uint8_t*)v9, sizeof(v9), false);
 
+            askForInitialValues();
         }
     }
 
