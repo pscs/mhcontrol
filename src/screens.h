@@ -1,6 +1,7 @@
 #pragma once
 
 #include <lvgl.h>
+#include <string>
 
 void locationUpdate();
 
@@ -11,6 +12,11 @@ public:
 
 	void updateSdCardIcon(bool mounted);
 
+	static void doCalibration(lv_event_t *);
+	static void setCalibration();
+	static void setCalibrationFromString(const char *str);
+	static std::string getCalibrationString();
+
 	lv_obj_t *wifiStrength_label;
 	lv_obj_t *wifiStrength_icon;
 	lv_obj_t *diskIcon;
@@ -18,6 +24,9 @@ public:
 	lv_obj_t *tabs;
 private:
 	lv_obj_t *time_label;
+
+	static uint16_t calibData[5];
+
 
 };
 

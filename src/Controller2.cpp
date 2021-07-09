@@ -319,8 +319,7 @@ void setup() {
   tft.begin();
   tft.setRotation(3);
 
-  uint16_t calData[5] = { 419, 3299, 428, 3182, 1 };
-  tft.setTouch(calData);
+  ScreenClass::setCalibration();
 
 
   lv_disp_draw_buf_init(&draw_buf, buf, NULL, screenWidth * 10);

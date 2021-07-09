@@ -7,6 +7,7 @@
 #include "victron_B2B.h"
 #include "victron_mainscharger.h"
 #include "victron_smartsolar.h"
+#include "screens.h"
 
 #include <string.h>
 
@@ -25,11 +26,12 @@ void IniFile::save(const char *filename) {
         fprintf(file, "auditlog.filename=%s\n", auditLogger.getFilename().c_str());
         fprintf(file, "auditlog.maxsize=%d\n", auditLogger.getMaxSize());
         fprintf(file, "auditlog.flush=%d\n", auditLogger.getAlwaysFlush()? 1 : 0);
-        fprintf(file, "screentimeout=%d\n", screenTimeout);
         fprintf(file, "solar.enabled=%d\n", victronSmartSolar.isEnabled() ? 1 : 0);
         fprintf(file, "b2b.enabled=%d\n", victronB2B.isEnabled() ? 1 : 0);
         fprintf(file, "mains.enabled=%d\n", victronMainsCharger.isEnabled() ? 1 : 0);
         fprintf(file, "battery.enabled=%d\n", ksEnergyBattery.isEnabled() ? 1 : 0);
+		fprintf(file, "screen.calibration=%s\n", ScreenClass::getCalibrationString().c_str());
+        fprintf(file, "screen.timeout=%d\n", screenTimeout);
         fclose(file);
     }
 }
@@ -65,17 +67,19 @@ void IniFile::load(const char *filename) {
                 auditLogger.setMaxSize(atoi(data));      
             } else if (strcmp(field, "auditlog.flush") == 0) {
                 auditLogger.setAlwaysFlush(atoi(data));      
-            } else if (strcmp(field, "screentimeout") == 0) {
-                screenTimeout = atoi(data);      
-            } else if (strcmp(field, "solar.Enabled") == 0) {
+           } else if (strcmp(field, "solar.enabled") == 0) {
                 victronSmartSolar.enable(atoi(data));      
-            } else if (strcmp(field, "b2b.Enabled") == 0) {
+            } else if (strcmp(field, "b2b.enabled") == 0) {
                 victronB2B.enable(atoi(data));
-            } else if (strcmp(field, "mains.Enabled") == 0) {
+            } else if (strcmp(field, "mains.enabled") == 0) {
                 victronMainsCharger.enable(atoi(data));
-            } else if (strcmp(field, "battery.Enabled") == 0) {
+            } else if (strcmp(field, "battery.enabled") == 0) {
                 ksEnergyBattery.enable(atoi(data));
-            }
+            } else if (strcmp(field, "screen.calibration") == 0) {
+				ScreenClass::setCalibrationFromString(data);
+            } else if (strcmp(field, "screen.timeout") == 0) {
+                screenTimeout = atoi(data);      
+ 			}
         }
 
         fclose(file);

@@ -7,8 +7,16 @@
 #include "timezone.h"
 #include "power_screen.h"
 #include "weather_screen.h"
+#include "config.h"
+#include <TFT_eSPI.h>
+#include "inifile.h"
+#include "sound.h"
+#include "logger.h"
 
 ScreenClass Screen;
+
+uint16_t ScreenClass::calibData[5];
+
 
 extern lv_img_dsc_t imgSdCard;
 
@@ -74,4 +82,71 @@ void ScreenClass::updateSdCardIcon(bool mounted) {
 	} else {
 		lv_obj_set_style_img_opa(diskIcon, LV_OPA_TRANSP, LV_PART_MAIN);
 	}
+}
+
+
+void ScreenClass::doCalibration(lv_event_t *) {
+	sound.addNote(1000, 100);
+
+	tft.fillScreen(TFT_BLACK);
+	tft.setCursor(20, 0);
+	tft.setTextFont(2);
+	tft.setTextSize(1);
+	tft.setTextColor(TFT_WHITE, TFT_BLACK);
+
+	tft.println("Touch corners as indicated");
+
+	tft.setTextFont(1);
+	tft.println();
+
+	uint16_t calData[5];
+
+	tft.calibrateTouch(calData, TFT_MAGENTA, TFT_BLACK, 15);
+
+	lv_obj_t *scr = lv_scr_act();
+	lv_scr_load(scr);
+	for (int i = 0; i < 5; i++) {
+		logger.printf(LOG_GENERAL, LOG_INFO, "Screen cal data %d = %d\n", i, calData[i]);
+	}
+
+	memcpy(calibData, calData, sizeof(calibData));
+	setCalibration();
+	IniFile::save(SETTINGS_FILENAME);
+
+	sound.addNote(1000, 50);
+	sound.addNote(2000, 50);
+	sound.addNote(4000, 50);
+}
+
+void ScreenClass::setCalibration() {
+//  uint16_t calData[5] = { 419, 3299, 428, 3182, 1 };
+	if ((calibData[0] == 0) && (calibData[1] == 0)) {
+		setCalibrationFromString(DEFAULT_SCREEN_CALIBRATION);
+	} else {
+		tft.setTouch(calibData);
+	}
+}
+
+void ScreenClass::setCalibrationFromString(const char *str_) {
+	char *str = strdup(str_);
+	const char *p1 = strtok(str, ",");
+	const char *p2 = strtok(nullptr, ",");
+	const char *p3 = strtok(nullptr, ",");
+	const char *p4 = strtok(nullptr, ",");
+	const char *p5 = strtok(nullptr, ",");
+	if (p5) {
+		calibData[0] = atoi(p1);
+		calibData[1] = atoi(p2);
+		calibData[2] = atoi(p3);
+		calibData[3] = atoi(p4);
+		calibData[4] = atoi(p5);
+		tft.setTouch(calibData);
+	}
+	free(str);
+}
+
+std::string ScreenClass::getCalibrationString() {
+	char buffer[50];
+	snprintf(buffer, sizeof(buffer), "%d,%d,%d,%d,%d", calibData[0], calibData[1], calibData[2], calibData[3], calibData[4]);
+	return buffer;
 }

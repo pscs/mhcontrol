@@ -4,6 +4,7 @@
 
 #include "timezone.h"
 #include "logger.h"
+#include "screens.h"
 
 OptionsScreen Options;
 
@@ -42,6 +43,15 @@ void OptionsScreen::Create(lv_obj_t *scr)
 	freeMemField = lv_label_create(scr);
 	lv_obj_set_grid_cell(freeMemField, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, row++, 1);
 	lv_label_set_text(freeMemField, "**");
+
+	lv_obj_t *btn = lv_btn_create(scr);
+	lv_obj_set_grid_cell(btn, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_CENTER, row, 1);
+
+	label = lv_label_create(btn);
+	lv_obj_center(label);
+	lv_label_set_text(label, "Cal scrn");
+	
+	lv_obj_add_event_cb(btn, ScreenClass::doCalibration, LV_EVENT_CLICKED, NULL);
 }
 
 void OptionsScreen::Update()
