@@ -273,3 +273,10 @@ std::string KSEnergyBattery::getStateText() const {
             }
     }
 }
+
+void KSEnergyBattery::setDemoData(int16_t v, int32_t i, uint16_t s, uint8_t soc) {
+    voltage = v;
+    current = i;
+    state = s;
+    SOC = soc;
+}

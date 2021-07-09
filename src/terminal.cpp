@@ -63,8 +63,8 @@ Setting settings[] {
                         logger.setLevel(LOG_GENERAL, level);
                     } else {
                         for (int i = LOG_GENERAL + 1; i < NUM_LOG_SOURCES; i++) {
-                            if (strcmp(logger.getComponentName(i), name) == 0) {
-                                logger.setLevel(i, level);
+                            if (strcmp(logger.getComponentName(static_cast<LogSource>(i)), name) == 0) {
+                                logger.setLevel(static_cast<LogSource>(i), level);
                             }
                         }
                     }
@@ -76,9 +76,9 @@ Setting settings[] {
                 strcpy(value, logger.isEnabled() ? "enabled" : "disabled");
                 for (int i = 0; i < NUM_LOG_SOURCES; i++) {
                     int len = strlen(value);
-                    const char *name = (i == 0) ? "general" : logger.getComponentName(i);
+                    const char *name = (i == 0) ? "general" : logger.getComponentName(static_cast<LogSource>(i));
                     snprintf(value + len, size - len, "\r\n  %s: %s(%d)",
-                        name , logger.getLevelName(i), logger.getLevel(i));
+                        name , logger.getLevelName(static_cast<LogSource>(i)), logger.getLevel(static_cast<LogSource>(i)));
                 }
             }
     },
@@ -218,8 +218,10 @@ void Terminal::processCommand(char *cmd) {
         print("mem - show free memory\r\n");
         print("set <setting> <value>\r\n");
         print("show [<setting>]\r\n");
-        print("battery [enable|disable]- show battery data\r\n");
-        print("solar [enable|disable]- show solar charger data\r\n");
+        print("battery [enable|disable|demo]- show battery data\r\n");
+        print("solar [enable|disable|demo]- show solar charger data\r\n");
+        print("mains [enable|disable|demo]- show mains charger data\r\n");
+        print("b2b [enable|disable|demo]- show b2b charger data\r\n");
     } else if (strcmp(command, "show") == 0) {
         const int num = sizeof(settings) / sizeof(settings[0]);
         if (param) {
@@ -299,10 +301,22 @@ void Terminal::processCommand(char *cmd) {
             } else if (strcmp(param, "disable") == 0) {
                 ksEnergyBattery.enable(false);
                 IniFile::save(SETTINGS_FILENAME);
+            } else if (strcmp(param, "demo") == 0) {
+                const char *v = strtok(nullptr, " ");
+                const char *i = strtok(nullptr, " ");
+                const char *s = strtok(nullptr, " ");
+                const char *soc = strtok(nullptr, " ");
+                if (soc) {
+                    ksEnergyBattery.setDemoMode(true);
+                    ksEnergyBattery.setDemoData(atof(v) * 1000, atof(i) * 1000, strtoul(s, nullptr, 16), atoi(soc));
+                } else if (v && (strcmp(v, "off") == 0)) {
+                    ksEnergyBattery.setDemoMode(false);
+                }
             }
         }
-        printf("Battery is: %s %s\r\n", ksEnergyBattery.isEnabled() ? "Enabled" : "Disabled", 
-            ksEnergyBattery.isConnected() ? "Connected" : "Disconnected");
+        printf("Battery is: %s %s %s\r\n", ksEnergyBattery.isEnabled() ? "Enabled" : "Disabled", 
+            ksEnergyBattery.isConnected() ? "Connected" : "Disconnected",
+            ksEnergyBattery.isDemoMode() ? "Demo Mode" : "");
         printf("Last Update: %s\r\n", ksEnergyBattery.getLastUpdateTimeText());
         printf("Voltage: %.2fV\r\n", ksEnergyBattery.getVoltage() / 1000.0);
         printf("Current: %.2fA\r\n", ksEnergyBattery.getCurrent() / 1000.0);
@@ -326,17 +340,19 @@ void Terminal::processCommand(char *cmd) {
                 IniFile::save(SETTINGS_FILENAME);
             } else if (strcmp(param, "demo") == 0) {
                 const char *v1 = strtok(nullptr, " ");
-                const char *v2 = strtok(nullptr, " ");
-                const char *i1 = strtok(nullptr, " ");
-                const char *i2 = strtok(nullptr, " ");
                 const char *p1 = strtok(nullptr, " ");
+                const char *v2 = strtok(nullptr, " ");
+                const char *i2 = strtok(nullptr, " ");
                 const char *t = strtok(nullptr, " ");
                 const char *s = strtok(nullptr, " ");
                 if (s) {
                     victronSmartSolar.setDemoMode(true);
-                    victronSmartSolar.setDemoData(atoi(v1), atoi(v2), atoi(i1), atoi(i2), atoi(p1), 0, atoi(t), atoi(s));
+                    victronSmartSolar.setDemoData(atoi(v1), atoi(v2), 0, atoi(i2), atoi(p1), 0, atoi(t), atoi(s));
                 } else if (v1 && (strcmp(v1, "off") == 0)) {
                     victronSmartSolar.setDemoMode(false);
+                } else {
+					printf("solar demo <panel volts> <panel power> <out volts> <out current> <temp> <status>\n");
+					printf("solar demo off\n");
                 }
             }
         }
@@ -361,6 +377,20 @@ void Terminal::processCommand(char *cmd) {
             } else if (strcmp(param, "disable") == 0) {
                 victronB2B.enable(false);
                 IniFile::save(SETTINGS_FILENAME);
+            } else if (strcmp(param, "demo") == 0) {
+                const char *v0 = strtok(nullptr, " ");
+                const char *v1 = strtok(nullptr, " ");
+                const char *t = strtok(nullptr, " ");
+                const char *s = strtok(nullptr, " ");
+                if (s) {
+                    victronMainsCharger.setDemoMode(true);
+                    victronMainsCharger.setDemoData(atof(v0) * 100, atof(v1) * 100, 0, 0, 0, 0, atof(t) * 100, atoi(s));
+                } else if (v1 && (strcmp(v1, "off") == 0)) {
+                    victronMainsCharger.setDemoMode(false);
+                } else {
+					printf("b2b demo <in volts> <out volts> <temp> <status>\n");
+					printf("b2b demo off\n");
+				}
             }
         }
         printf("B2B charger is: %s %s\r\n", victronB2B.isEnabled() ? "Enabled" : "Disabled", 
@@ -383,19 +413,31 @@ void Terminal::processCommand(char *cmd) {
             } else if (strcmp(param, "disable") == 0) {
                 victronMainsCharger.enable(false);
                 IniFile::save(SETTINGS_FILENAME);
+            } else if (strcmp(param, "demo") == 0) {
+                const char *v1 = strtok(nullptr, " ");
+                const char *i1 = strtok(nullptr, " ");
+                const char *t = strtok(nullptr, " ");
+                const char *s = strtok(nullptr, " ");
+                if (s) {
+                    victronMainsCharger.setDemoMode(true);
+                    victronMainsCharger.setDemoData(atof(v1) * 100, 0, atof(i1) * 100, 0, 0, 0, atof(t) * 100, atoi(s));
+                } else if (v1 && (strcmp(v1, "off") == 0)) {
+                    victronMainsCharger.setDemoMode(false);
+                } else {
+					printf("mains demo <out volts> <out current> <temp> <status>\n");
+					printf("mains demo off\n");
+                }
             }
         }
-        printf("Mains Charger is: %s %s\r\n", victronMainsCharger.isEnabled() ? "Enabled" : "Disabled", 
-            victronMainsCharger.isConnected() ? "Connected" : "Disconnected");
+        printf("Mains Charger is: %s %s %s\r\n", victronMainsCharger.isEnabled() ? "Enabled" : "Disabled", 
+            victronMainsCharger.isConnected() ? "Connected" : "Disconnected",
+			victronMainsCharger.isDemoMode() ? "Demo Mode" : "");
         printf("Last Update: %s\r\n", victronMainsCharger.getLastUpdateTimeText());
-        printf("Starter Batt Voltage: %.2fV\r\n", victronMainsCharger.getVoltage(0) / 100.0);
-        printf("Starter Batt Current: %.2fA\r\n", victronMainsCharger.getCurrent(0) / 100.0);
-        printf("Starter Batt Power: %.2fW\r\n", victronMainsCharger.getPower(0) / 100.0);
-        printf("Charge Voltage: %.2fV\r\n", victronMainsCharger.getVoltage(1) / 100.0);
-        printf("Charge Current: %.2fA\r\n", victronMainsCharger.getCurrent(1) / 100.0);
-        printf("Charge Power: %.2fW\r\n", victronMainsCharger.getPower(1) / 100.0);
-        printf("State: %d\r\n", victronMainsCharger.getState());
-        printf("Temperature: %.2f\r\n", victronMainsCharger.getTemperature() / 100.0);
+
+        printf("Charge Voltage: %.2f V\r\n", victronMainsCharger.getVoltage(1) / 100.0);
+        printf("Charge Current: %.2f A\r\n", victronMainsCharger.getCurrent(1) / 100.0);
+        printf("State: %d (%s)\r\n", victronMainsCharger.getState(), victronMainsCharger.getStateText());
+        printf("Temperature: %.2f C\r\n", victronMainsCharger.getTemperature() / 100.0);
     } else if (strcmp(command, "wifi") == 0) {
         if (param) {
             const char *param2 = strtok(nullptr, " ");

@@ -11,6 +11,8 @@ public:
 private:
   lv_obj_t *timeField;
   lv_obj_t *timezoneField;
+  lv_obj_t *uptimeField;
+  lv_obj_t *freeMemField;
 };
 
 extern OptionsScreen Options;

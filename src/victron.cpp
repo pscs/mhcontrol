@@ -375,6 +375,28 @@ void Victron::setDemoData(int16_t v1, int16_t v2, int16_t i1, int16_t i2, uint32
     state = s;
 }
 
+const char *Victron::getStateText() const {
+	switch (state) {
+		case 0: return "Not charging";
+		case 1: return "Low power mode";
+		case 2: return "Fault";
+		case 3: return "Bulk";
+		case 4: return "Absorption";
+		case 5: return "Float";
+		case 6: return "Storage";
+		case 7: return "Manual equalise";
+		case 8: return "Passthrough";
+		case 9: return "Inverting";
+		case 10: return "Assisting";
+		case 11: return "PSU Mode";
+		case 245: return "Wake-up";
+		case 247: return "Auto equalise";
+		case 252: return "External control";
+		case 255: return "Unavailable";
+		default: return "Unknown";
+	}
+}
+
 
 #if 0
 

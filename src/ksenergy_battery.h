@@ -58,6 +58,14 @@ public:
     void processData();
     static uint8_t charToHex(char ch);
 
+    void setDemoMode(bool d) {
+        demoMode = d;
+    }
+    bool isDemoMode() const {
+        return demoMode;
+    }
+    void setDemoData(int16_t v, int32_t i, uint16_t s, uint8_t soc);
+
 private:
     BLERemoteCharacteristic *pCharacteristic = nullptr;
 
@@ -73,6 +81,7 @@ private:
     uint32_t remainingCapacity = 0;
     uint32_t fullCapacity = 0;
     uint16_t SOH = 0;
+    bool demoMode = false;
 
 };
 

@@ -139,20 +139,20 @@ void displayWifiInfo()
 {
   char buf[20];
   snprintf(buf, sizeof(buf), "%s", WiFi.SSID().c_str());
-  lv_label_set_text(wifiStrength_label, buf);
+  lv_label_set_text(Screen.wifiStrength_label, buf);
   int rssi = WiFi.RSSI();
   if (rssi == 0) {
-    lv_img_set_src(wifiStrength_icon, &img_WifiNone);
+    lv_img_set_src(Screen.wifiStrength_icon, &img_WifiNone);
   } else {
     int quality = (rssi + 100) * 2;
     if (quality >= 90) {
-      lv_img_set_src(wifiStrength_icon, &img_Wifi3);
+      lv_img_set_src(Screen.wifiStrength_icon, &img_Wifi3);
     } else if (quality >= 50) {
-      lv_img_set_src(wifiStrength_icon, &img_Wifi2);
+      lv_img_set_src(Screen.wifiStrength_icon, &img_Wifi2);
     } else if (quality >= 0) {
-      lv_img_set_src(wifiStrength_icon, &img_Wifi1);
+      lv_img_set_src(Screen.wifiStrength_icon, &img_Wifi1);
     } else {
-      lv_img_set_src(wifiStrength_icon, &img_Wifi0);
+      lv_img_set_src(Screen.wifiStrength_icon, &img_Wifi0);
     }
   }
 }

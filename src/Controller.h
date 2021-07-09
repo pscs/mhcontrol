@@ -11,3 +11,5 @@ extern std::string WifiSSID;
 extern std::string WifiPassword;
 
 extern uint32_t screenTimeout;
+
+extern bool sdCardMounted;

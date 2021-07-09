@@ -14,7 +14,7 @@ Logger::~Logger() {
     }
 }
 
-void Logger::printf(uint8_t component, int8_t level, const char *fmt, ...) {
+void Logger::printf(LogSource component, int8_t level, const char *fmt, ...) {
     if ((enabled) && (level <= getLevel(component))) {
         va_list args;
         va_start(args, fmt);
@@ -37,7 +37,7 @@ void Logger::println(uint16_t component, const char *fmt, ...) {
     }
 }*/
 
-void Logger::send(uint8_t component, int8_t level, const char *str) {
+void Logger::send(LogSource component, int8_t level, const char *str) {
     if ((enabled) && (level <= getLevel(component))) {
         if (serialOut) {
             ::printf("%s(%d) %s", getComponentName(component), level, str);
@@ -104,7 +104,7 @@ void Logger::setFilename(const char *fn) {
     }
 }
 
-void Logger::setLevel(uint8_t component, int8_t level) {
+void Logger::setLevel(LogSource component, int8_t level) {
     if (component < NUM_LOG_SOURCES) {
         logLevel[component] = level;
     }
@@ -148,7 +148,7 @@ std::string Logger::getLevelString() const {
     return result;
 }
 
-const char *Logger::getComponentName(uint8_t component) const {
+const char *Logger::getComponentName(LogSource component) const {
     switch(component) {
     case LOG_GENERAL:
         return "";
@@ -172,12 +172,16 @@ const char *Logger::getComponentName(uint8_t component) const {
         return "rtc";
     case LOG_BATTERY:
         return "batt";
+	case LOG_OPTIONS:
+		return "options";
+	case LOG_SOUND:
+		return "sound";
     default:
         return "unknwn";            
     }
 }
 
-const char *Logger::getLevelName(uint8_t component) const {
+const char *Logger::getLevelName(LogSource component) const {
     switch(getLevel(component)) {
     case LOG_SECURITY:
         return "security";

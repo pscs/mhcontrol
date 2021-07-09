@@ -3,18 +3,9 @@
 #include <cstdint>
 #include <string>
 
-const uint8_t LOG_GENERAL = 0;
-const uint8_t LOG_WEATHER = 1;
-const uint8_t LOG_WIFI = 2;
-const uint8_t LOG_BLE = 3;
-const uint8_t LOG_THINGSBOARD = 4;
-const uint8_t LOG_VICTRON = 5;
-const uint8_t LOG_TERMINAL = 6;
-const uint8_t LOG_GPS = 7;
-const uint8_t LOG_ACCELEROMETER = 8;
-const uint8_t LOG_RTC = 9;
-const uint8_t LOG_BATTERY = 10;
-const uint8_t NUM_LOG_SOURCES = 11;
+enum LogSource {LOG_GENERAL, LOG_WEATHER, LOG_WIFI, LOG_BLE, LOG_THINGSBOARD, LOG_VICTRON, LOG_TERMINAL, LOG_GPS, 
+	LOG_ACCELEROMETER, LOG_RTC, LOG_BATTERY, LOG_OPTIONS, LOG_SOUND,
+	NUM_LOG_SOURCES};
 
 const int8_t LOG_SECURITY = -1;
 const int8_t LOG_FATAL = 0;
@@ -42,13 +33,13 @@ public:
         return enabled;
     }
 
-    int8_t getLevel(uint8_t component) const {
+    int8_t getLevel(LogSource component) const {
         return (component < NUM_LOG_SOURCES) ? logLevel[component] : logLevel[0];
     };
-    void setLevel(uint8_t component, int8_t level);
+    void setLevel(LogSource component, int8_t level);
     void setAllLevels(int8_t level);
-    const char *getLevelName(uint8_t component) const;
-    const char *getComponentName(uint8_t component) const;
+    const char *getLevelName(LogSource component) const;
+    const char *getComponentName(LogSource component) const;
 
     void setLevelsFromString(const char *str);
     std::string getLevelString() const;
@@ -94,8 +85,8 @@ public:
     }*/
 
     //void println(uint16_t component, const char *fmt, ...);
-    void printf(uint8_t component, int8_t level, const char *fmt, ...);
-    void send(uint8_t component, int8_t level, const char *str);
+    void printf(LogSource component, int8_t level, const char *fmt, ...);
+    void send(LogSource component, int8_t level, const char *str);
 
 private:
     bool enabled = true;

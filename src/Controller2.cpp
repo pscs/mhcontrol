@@ -16,11 +16,6 @@
 #include <SoftwareSerial.h>
 #endif
 
-//#define _TASK_SLEEP_ON_IDLE_RUN
-#define _TASK_STATUS_REQUEST
-//#include "esp32_sleep.h"
-#include <TaskScheduler.h>
-
 #include "screens.h"
 #include "timezone.h"
 #include "Controller.h"
@@ -33,8 +28,13 @@
 #include "serial_terminal.h"
 #include "logger.h"
 #include "inifile.h"
-
+#include "sound.h"
 #include "telnet_terminal.h"
+
+//#define _TASK_SLEEP_ON_IDLE_RUN
+#define _TASK_STATUS_REQUEST
+//#include "esp32_sleep.h"
+#include <TaskScheduler.h>
 
 #define LVGL_TICK_PERIOD 60
 
@@ -157,13 +157,9 @@ void my_touchpad_read(lv_indev_drv_t * indev_driver, lv_indev_data_t * data)
       /*Set the coordinates (if released use the last pressed coordinates)*/
       data->point.x = touchX;
       data->point.y = touchY;
-  
-      Serial.print("Data x");
-      Serial.println(touchX);
-      
-      Serial.print("Data y");
-      Serial.println(touchY);
 
+	  logger.printf(LOG_GENERAL, LOG_DEBUG, "Touch - %d, %d\n", touchX, touchY);
+  
       if (screenTimeout >= 30) {
         tDimDisplay.enableDelayed(screenTimeout * 1000);
       }
@@ -365,15 +361,36 @@ void setup() {
   WifiSSID = WIFI_SSID;
   WifiPassword = WIFI_PASSWORD;
 
-  if(SD.begin(32, SPI, 100000)) {
-    sdCardMounted = true;
+	{
+		uint32_t start = millis();
+		do {
+			if(SD.begin(32, SPI, 100000)) {
+				sdCardMounted = true;
 
-    IniFile::load(SETTINGS_FILENAME);
-  } else {
-    printf("Failed to mount SD card\n");
-  }
+				IniFile::load(SETTINGS_FILENAME);
+			}
+			else {
+				delay(10);
+			}
+		}
+		while ((!sdCardMounted) && (millis() - start < 2000));
+	}
+	
+	if (!sdCardMounted) {
+		logger.send(LOG_GENERAL, LOG_ERROR, "Failed to mount SD card\n");
+	}
+	Screen.updateSdCardIcon(sdCardMounted);
 
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+	  //sound configuration
+	ledcSetup(1, 10000, 12);
+  	ledcAttachPin(21, 1);
+
+	sound.initialise(1, 20);
+
+	sound.addNote(4000, 100);
+	sound.addNote(2000, 100);
+
+	WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
     ArduinoOTA
     .onStart([]() {

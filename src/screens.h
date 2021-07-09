@@ -2,22 +2,23 @@
 
 #include <lvgl.h>
 
-extern lv_obj_t * wifiStrength_label;
-extern lv_obj_t * wifiStrength_icon;
-extern lv_obj_t * freeMem_label;
-
-//extern lv_obj_t *scrPreferences;
-
 void locationUpdate();
 
 class ScreenClass {
 public:
-  void Create(lv_obj_t *scr);
-  void Update();
+	void Create(lv_obj_t *scr);
+	void Update();
 
+	void updateSdCardIcon(bool mounted);
+
+	lv_obj_t *wifiStrength_label;
+	lv_obj_t *wifiStrength_icon;
+	lv_obj_t *diskIcon;
+
+	lv_obj_t *tabs;
 private:
-  lv_obj_t * counter_label;
-  lv_obj_t * freeMem_label;
+	lv_obj_t *time_label;
+
 };
 
 extern ScreenClass Screen;

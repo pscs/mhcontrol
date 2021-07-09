@@ -28,6 +28,7 @@ public:
     uint8_t getState() const {
         return state;
     }
+	const char *getStateText() const;
 
     void keepAlive() override;
     virtual BLEUUID getServiceUUID() const;
