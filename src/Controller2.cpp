@@ -30,6 +30,7 @@
 #include "inifile.h"
 #include "sound.h"
 #include "telnet_terminal.h"
+#include "accelerometer.h"
 
 //#define _TASK_SLEEP_ON_IDLE_RUN
 #define _TASK_STATUS_REQUEST
@@ -68,6 +69,11 @@ uint32_t wifiLastTryConnect;
 uint32_t wifiNextTryConnect;
 std::string WifiSSID;
 std::string WifiPassword;
+bool DHCPMode = true;
+IPAddress StaticIP;
+IPAddress StaticMask;
+IPAddress StaticGateway;
+IPAddress StaticDNS[2];
 
 uint32_t screenTimeout = 30;
 
@@ -86,18 +92,22 @@ void fnFeedGPS();
 Task tFeedGPS(100, -1, &fnFeedGPS, &ts, true);
 void fnUpdateDisplay();
 Task tUpdateDisplay(1000, -1, &fnUpdateDisplay, &ts, true);
+void fnFastUpdateDisplay();
+Task tFastUpdateDisplay(75, -1, &fnFastUpdateDisplay, &ts, true);
 void fnUpdateTimezone();
 Task tUpdateTimezone(300 * 1000, -1, &fnUpdateTimezone, &ts, false);
 void fnUpdateLocator();
 Task tUpdateLocator(300 * 1000, -1, &fnUpdateLocator, &ts, false);
 void fnUpdateWeather();
 Task tUpdateWeather(600 * 1000, -1, &fnUpdateWeather, &ts, false);
-Task tBLEConnect(10 * 1000, -1, &BLEConnect, &ts, true);
-Task tBLEKeepAlive(5 * 1000, -1, &BLEKeepAlive, &ts, true);
+Task tBLEConnect(20 * 1000, -1, &BLEConnect, &ts, true);
+Task tBLEKeepAlive(2 * 1000, -1, &BLEKeepAlive, &ts, true);
 //Task tBLEKeepAlive(1 * 1000, -1, &BLEKeepAlive, &ts, true);
 Task tUpdateThingsboard(10 * 1000, -1, &updateThingsBoard, &ts, true);
 void fnFlushLogfiles();
 Task tFlushLogFiles(600 * 1000, -1, &fnFlushLogfiles, &ts, true);
+void fnCloseServerPinScreen();
+Task tCloseServerPinScreen(0, -1, &fnCloseServerPinScreen, &ts, false);
 
 //------------------------------------------------------------------------------------------
 
@@ -275,9 +285,10 @@ void setup() {
   //digitalWrite(15, LOW);
 
   brightness = highBrightness;
-  ledcSetup(0, 5000, 8);
-  ledcAttachPin(15, 0);
-  ledcWrite(0, 255 - brightness);
+  brightness = 128;
+  ledcSetup(BacklightChannel, 5000, 8);
+  ledcAttachPin(BacklightPin, BacklightChannel);
+  ledcWrite(BacklightChannel, 255 - brightness);
 
   
   printf("Flash chip size: %d\n", ESP.getFlashChipSize());
@@ -320,6 +331,7 @@ void setup() {
   tft.setRotation(3);
 
   ScreenClass::setCalibration();
+  accelerometer.initialise(0x53);
 
 
   lv_disp_draw_buf_init(&draw_buf, buf, NULL, screenWidth * 10);
@@ -381,15 +393,15 @@ void setup() {
 	Screen.updateSdCardIcon(sdCardMounted);
 
 	  //sound configuration
-	ledcSetup(1, 10000, 12);
-  	ledcAttachPin(21, 1);
+	ledcSetup(SoundChannel, 10000, 12);
+  	ledcAttachPin(SoundPin, SoundChannel);
 
-	sound.initialise(1, 20);
+	sound.initialise(SoundChannel, 20);
 
 	sound.addNote(4000, 100);
 	sound.addNote(2000, 100);
 
-	WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+	//WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
     ArduinoOTA
     .onStart([]() {
@@ -442,7 +454,7 @@ void setup() {
 
   lv_obj_add_event_cb(dropdownMenu, menu_cb, LV_EVENT_VALUE_CHANGED, NULL);
 #endif
-  wifiNextTryConnect = 30000;
+  wifiNextTryConnect = 1000;
   wifiLastTryConnect = millis();
 
   if (screenTimeout >= 30) {
@@ -453,6 +465,12 @@ void setup() {
 void loop() {
   static uint32_t lastDim = 0;
   static uint32_t lastLocationUpdate = 0;
+
+	if (bleManager.isServerPinRequired()) {
+		tCloseServerPinScreen.enableDelayed(20000);
+		tWakeDisplay.enable();
+		bleManager.requestServerPin();
+	}
 
   lv_timer_handler(); /* let the GUI do its work */
   ArduinoOTA.handle();
@@ -467,6 +485,11 @@ void loop() {
   if (now - wifiLastTryConnect >= wifiNextTryConnect) {
     if (WiFi.status() != WL_CONNECTED) {
       WiFi.disconnect();
+	  if (!DHCPMode) {
+		  WiFi.config(StaticIP, StaticGateway, StaticMask, StaticDNS[0], StaticDNS[1]);
+	  } else {
+		  WiFi.config(static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0));
+	  }
       if (!WiFi.begin(WifiSSID.c_str(), WifiPassword.c_str())) {
         logger.send(LOG_WIFI, LOG_WARNING, "WiFi not connected!\n");
       } else {
@@ -498,7 +521,6 @@ void loop() {
 //  }
 
   // put your main code here, to run repeatedly:
-
 }
 
 void fnDimDisplay() {
@@ -508,9 +530,9 @@ void fnDimDisplay() {
     brightness = lowBrightness;
   }
   if (brightness == 0) {
-    ledcWrite(0, 256);
+    ledcWrite(BacklightChannel, 256);
   } else {
-    ledcWrite(0, 255 - brightness);
+    ledcWrite(BacklightChannel, 255 - brightness);
   }
 }
 
@@ -520,7 +542,7 @@ void fnWakeDisplay() {
     tWakeDisplay.disable();
     brightness = highBrightness;
   }
-  ledcWrite(0, 255 - brightness);
+  ledcWrite(BacklightChannel, 255 - brightness);
 }
 
 void fnFeedGPS() {
@@ -606,6 +628,14 @@ void fnUpdateDisplay() {
   Screen.Update();
 }
 
+void fnFastUpdateDisplay() {
+  Screen.fastUpdate();
+}
+
 void fnFlushLogfiles() {
   logger.flush();
+}
+
+void fnCloseServerPinScreen() {
+	bleManager.closeServerPinScreen();
 }

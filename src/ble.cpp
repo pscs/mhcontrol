@@ -7,6 +7,8 @@
 #include "victron_mainscharger.h"
 #include "ksenergy_battery.h"
 #include "logger.h"
+#include "mybleserver.h"
+#include "Arduino.h"
 
 BLEManager bleManager;
 
@@ -34,15 +36,17 @@ void BLEScanDone(BLEScanResults) {
 
 void BLEManager::initialise()
 {
-    BLEDevice::init("");
+    BLEDevice::init("mhcontrol");
 
     NimBLEDevice::deleteAllBonds();
-
-    //BLEDevice::setEncryptionLevel(ESP_BLE_SEC_ENCRYPT_MITM);
 
     NimBLEDevice::setSecurityAuth(true, true, false);
     NimBLEDevice::setSecurityIOCap(BLE_HS_IO_KEYBOARD_DISPLAY);
     NimBLEDevice::setSecurityRespKey(BLE_SM_PAIR_KEY_DIST_ENC | BLE_SM_PAIR_KEY_DIST_ID  | BLE_SM_PAIR_KEY_DIST_SIGN | BLE_SM_PAIR_KEY_DIST_LINK);
+//works for Victron servers
+//   NimBLEDevice::setSecurityAuth(true, true, false);
+//    NimBLEDevice::setSecurityIOCap(BLE_HS_IO_KEYBOARD_DISPLAY);
+//    NimBLEDevice::setSecurityRespKey(BLE_SM_PAIR_KEY_DIST_ENC | BLE_SM_PAIR_KEY_DIST_ID  | BLE_SM_PAIR_KEY_DIST_SIGN | BLE_SM_PAIR_KEY_DIST_LINK);
 
     pScanner = BLEDevice::getScan();
     pScanner->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks(this));
@@ -54,8 +58,11 @@ void BLEManager::initialise()
     addBLEClient(victronMainsCharger);
     addBLEClient(ksEnergyBattery);
 
+	server = new MyBLEServer();
+	
     logger.send(LOG_BLE, LOG_INFO, "Start BLE Scanner\n");
     scanInProgress = true;
+	scanStarted = millis();
     pScanner->start(5, BLEScanDone, false);
     logger.send(LOG_BLE, LOG_VERBOSE, "BLE Scanner started\n");
 }
@@ -67,7 +74,7 @@ void BLEManager::addBLEClient(MyBLEClient &client) {
 void BLEManager::setFound(BLEAddress addr) {
     for (auto &c: clients) {
       if (c.client.getAddress() == addr) {
-        printf("Set found - %s\n", c.client.getName());
+        logger.printf(LOG_BLE, LOG_INFO, "Set found - %s\n", c.client.getName());
         c.found = true;
         break;
       }
@@ -75,39 +82,73 @@ void BLEManager::setFound(BLEAddress addr) {
 }
 
 void BLEManager::connect() {
-  if (!scanInProgress) {
+	logger.send(LOG_BLE, LOG_INFO, "Check for connections\n");
+  if (scanInProgress) {
+	  if (millis() - scanStarted > 6000) {
+		  logger.send(LOG_BLE, LOG_INFO, "Force stop scanner after 6 seconds\n");
+		  pScanner->stop();
+	  }
+  } else {
+
+    bool anyNotConnected = false;
+	bool anyNewConnections = false;
+	
     for (auto &c: clients) {
       if (c.found) {
         //if (!c.client.isConnected()) {
           c.client.connectIfNecessary();
+		  anyNewConnections = true;
         //}
         c.found = false;
-      }
+	  }
     }
 
-    bool anyNotConnected = false;
-    for (auto &c: clients) {
-      if (!c.client.isConnected()) {
-        anyNotConnected = true;
-        break;
-      }
-    }
+	if (!anyNewConnections) {
+		for (auto &c: clients) {
+			if (!c.client.isConnected()) {
+				anyNotConnected = true;
+				break;
+			}
+		}
 
-    if (anyNotConnected) {
-      scanInProgress = true;
-      pScanner->start(5, BLEScanDone, false);
-      logger.send(LOG_BLE, LOG_INFO, "BLE Scanner started\n");
-    }
+		if (anyNotConnected) {
+			logger.send(LOG_BLE, LOG_INFO, "BLE Scanner restarting\n");
+
+			scanInProgress = true;
+			scanStarted = millis();
+			pScanner->start(5, BLEScanDone, true);
+			logger.send(LOG_BLE, LOG_INFO, "BLE Scanner restarted\n");
+		}
+	}
   }
+	logger.send(LOG_BLE, LOG_INFO, "Done Check for connections\n");
 
 }
 
 void BLEManager::keepAlive() {
+	logger.send(LOG_BLE, LOG_INFO, "BLEMgr Keepalive\n");
   for (auto &c: clients) {
     if (c.client.isConnected()) {
       c.client.keepAlive();
     }
   }
+  logger.send(LOG_BLE, LOG_INFO, "BLEMgr done keepalive\n");
+}
+
+bool BLEManager::isServerPinRequired() const {
+	return server && server->isPinRequired() && !server->isPinScreenVisible();
+}
+
+void BLEManager::requestServerPin() {
+	if (server) {
+		server->requestPin();
+	}
+}
+
+void BLEManager::closeServerPinScreen() {
+	if (server) {
+		server->closePinScreen();
+	}
 }
 
 void BLEConnect()

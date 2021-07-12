@@ -39,8 +39,10 @@ void Logger::println(uint16_t component, const char *fmt, ...) {
 
 void Logger::send(LogSource component, int8_t level, const char *str) {
     if ((enabled) && (level <= getLevel(component))) {
+		uint32_t now = millis();
+
         if (serialOut) {
-            ::printf("%s(%d) %s", getComponentName(component), level, str);
+            ::printf("%ul - %s(%d) %s", now, getComponentName(component), level, str);
         }
         if ((telnetOut) && (telnetTerminal.isConnected())) {
             char *x = strdup(str);
@@ -49,12 +51,12 @@ void Logger::send(LogSource component, int8_t level, const char *str) {
             for (int i = 0; i < len; i++) {
                 if (x[i] == '\n') {
                     x[i] = 0;
-                    telnetTerminal.printf("-- %s(%d) %s\r\n", getComponentName(component), level, x + start);
+                    telnetTerminal.printf("%ul -- %s(%d) %s\r\n", now, getComponentName(component), level, x + start);
                     start = i + 1;
                 }
             }
             if (start < len) {
-                telnetTerminal.printf("-- %s(%d) %s\r\n", getComponentName(component), level, x + start);
+                telnetTerminal.printf("%ul -- %s(%d) %s\r\n", now, getComponentName(component), level, x + start);
             }
             free(x);
         }
@@ -65,7 +67,7 @@ void Logger::send(LogSource component, int8_t level, const char *str) {
             }
         }
         if (file) {
-            fprintf(file, "%s(%d) %s", getComponentName(component), level, str);
+            fprintf(file, "%ul - %s(%d) %s", now, getComponentName(component), level, str);
             if (alwaysFlush) {
                 flush();
             }
@@ -123,6 +125,7 @@ void Logger::setLevelsFromString(const char *str) {
     while (p) {
         if (index < NUM_LOG_SOURCES) {
             logLevel[index] = atoi(p);
+			::printf("Init log level (%s) = %d\n", getComponentName(static_cast<LogSource>(index)), logLevel[index]);
         }
         index++;
         p = strtok(nullptr, " ");

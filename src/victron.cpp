@@ -98,6 +98,7 @@ bool Victron::connectIfNecessary()
 
           //pMPPTCharacteristic3->getDescriptor(BLEUUID((uint16_t)0x2902))->writeValue((uint8_t*)v, 2, false);
 
+			logger.printf(LOG_VICTRON, LOG_DEBUG, "Registered for notifies\n");
 
             const uint8_t v1[] = {0xfa, 0x80, 0xff};
             pChar1->writeValue((uint8_t*)v1, 3, false);
@@ -128,11 +129,14 @@ bool Victron::connectIfNecessary()
 //            const uint8_t v9[] = {0x05, 0x03, 0x81, 0x19, 0x02, 0x01, 0x05, 0x03, 0x81, 0x19, 0xed, 0xdb};
 //            pChar3->writeValue((uint8_t*)v9, sizeof(v9), false);
 
+			logger.send(LOG_VICTRON, LOG_DEBUG, "Sent standard init\n");
             askForInitialValues();
+			logger.send(LOG_VICTRON, LOG_DEBUG, "Sent device init\n");
         }
     }
 
     connected = true;
+	logger.send(LOG_VICTRON, LOG_DEBUG, "End Connect\n");
     return true;
 }
 
@@ -161,23 +165,20 @@ BLEUUID Victron::getServiceUUID() const {
 
 void Victron::keepAlive() {
     if (isConnected() && isEnabled()) {
+		printf("Victron keepalive 1\n");
           const uint8_t v[] = {0xf9, 0x41};
           pChar1->writeValue((uint8_t*)v, sizeof(v), false);
 
+		printf("Victron keepalive 2\n");
           const uint8_t v2[] = {0x06, 0x00, 0x82, 0x18, 0x93, 0x42, 0x10, 0x27};
           pChar2->writeValue((uint8_t*)v2, sizeof(v2), false);
 
-        const uint8_t v3[] = {0x05, 0x03, 0x81, 0x19, 0x02, 0x01};
-        //pChar3->writeValue((uint8_t*)v3, sizeof(v3), false);
-        const uint8_t v4[] = {0x05, 0x03, 0x81, 0x19, 0xed, 0xdb};
-        //pChar2->writeValue((uint8_t*)v4, sizeof(v4), false);
-
-          //printf("%s - Victron Send Keepalive\n", getName());
+		printf("Victron keepalive 3\n");
     }
 }
 
 void Victron::onNotify(uint8_t index, uint8_t *pData, size_t length) {
-    //printf("%s - Got Notify %d - %d (%d)\n", getName(), index, length, lenNotifyBuffer);
+    logger.printf(LOG_VICTRON, LOG_DEBUG, "%s - Got Notify %d - %d (%d)\n", getName(), index, length, lenNotifyBuffer);
     if ((index == 2) || (index == 3)) {
         if (lenNotifyBuffer + length < NotifyBufferSize) {
             memcpy(pNotifyBuffer + lenNotifyBuffer, pData, length);
@@ -270,6 +271,7 @@ void Victron::onNotify(uint8_t index, uint8_t *pData, size_t length) {
             }
         }
     }
+	logger.printf(LOG_VICTRON, LOG_DEBUG, "End onNotify\n");
 }
 
 bool Victron::getCBOR(uint8_t startPos, uint8_t &valLength_, int32_t &value) const {

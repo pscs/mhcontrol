@@ -104,7 +104,7 @@ void PowerScreen::Create(lv_obj_t *scr_)
 
 }
 
-void PowerScreen::Update() {
+void PowerScreen::update() {
   if (victronSmartSolar.isConnected() || victronSmartSolar.isDemoMode()) {
     lv_bar_set_value(solarBar, victronSmartSolar.getPower(0) / 100, LV_ANIM_ON);
 
@@ -153,21 +153,19 @@ void PowerScreen::Update() {
     lv_bar_set_value(socMeter, 0, LV_ANIM_ON);
   }
 
-  Window::Update();
+  Window::update();
 }
 
 //////////////////
 
 MainsChargerInfoWindow::MainsChargerInfoWindow(Window *parent_): Window(parent_) {
-	printf("show Mains Info Window\n");
 	scr = lv_win_create(lv_scr_act(), 40);
 	lv_win_add_title(scr, "Mains Charger");
 
 	lv_obj_t *btn = lv_win_add_btn(scr, LV_SYMBOL_CLOSE, 40);
 	lv_obj_add_event_cb(btn, [](lv_event_t *e) {
-		printf("close clicked\n");
-		sound.addNote(1000, 100);
-		sound.addNote(500, 100);
+		sound.addNote(1000, 50);
+		sound.addNote(500, 50);
 		Window::registry("powerscreen")->removeChild("win");
 		//lv_obj_del_async(powerScreen.win);
 	}, LV_EVENT_CLICKED, NULL);
@@ -218,10 +216,10 @@ MainsChargerInfoWindow::MainsChargerInfoWindow(Window *parent_): Window(parent_)
 	status = lv_label_create(cont);
 	lv_obj_set_grid_cell(status, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, row++, 1);
 
-	Update();
+	update();
 }
 
-void MainsChargerInfoWindow::Update() {
+void MainsChargerInfoWindow::update() {
 	char buf[100];
 
 	snprintf(buf, sizeof(buf), "%s %s %s", victronMainsCharger.isEnabled() ? "Enabled" : "Disabled",
@@ -250,8 +248,8 @@ SolarInfoWindow::SolarInfoWindow(Window *parent_): Window(parent_) {
 
 	lv_obj_t *btn = lv_win_add_btn(scr, LV_SYMBOL_CLOSE, 40);
 	lv_obj_add_event_cb(btn, [](lv_event_t *e) {
-		sound.addNote(1000, 100);
-		sound.addNote(500, 100);
+		sound.addNote(1000, 50);
+		sound.addNote(500, 50);
 		Window::registry("powerscreen")->removeChild("win");
 		//lv_obj_del_async(powerScreen.win);
 	}, LV_EVENT_CLICKED, NULL);
@@ -314,10 +312,10 @@ SolarInfoWindow::SolarInfoWindow(Window *parent_): Window(parent_) {
 	status = lv_label_create(cont);
 	lv_obj_set_grid_cell(status, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, row++, 1);
 
-	Update();
+	update();
 }
 
-void SolarInfoWindow::Update() {
+void SolarInfoWindow::update() {
 	char buf[100];
 
 	snprintf(buf, sizeof(buf), "%s %s %s", victronSmartSolar.isEnabled() ? "Enabled" : "Disabled",
@@ -350,8 +348,8 @@ B2BInfoWindow::B2BInfoWindow(Window *parent_): Window(parent_) {
 
 	lv_obj_t *btn = lv_win_add_btn(scr, LV_SYMBOL_CLOSE, 40);
 	lv_obj_add_event_cb(btn, [](lv_event_t *e) {
-		sound.addNote(1000, 100);
-		sound.addNote(500, 100);
+		sound.addNote(1000, 50);
+		sound.addNote(500, 50);
 		Window::registry("powerscreen")->removeChild("win");
 		//lv_obj_del_async(powerScreen.win);
 	}, LV_EVENT_CLICKED, NULL);
@@ -402,10 +400,10 @@ B2BInfoWindow::B2BInfoWindow(Window *parent_): Window(parent_) {
 	status = lv_label_create(cont);
 	lv_obj_set_grid_cell(status, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, row++, 1);
 
-	Update();
+	update();
 }
 
-void B2BInfoWindow::Update() {
+void B2BInfoWindow::update() {
 	char buf[100];
 
 	snprintf(buf, sizeof(buf), "%s %s %s", victronB2B.isEnabled() ? "Enabled" : "Disabled",

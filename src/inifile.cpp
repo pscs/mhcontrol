@@ -17,10 +17,14 @@ void IniFile::save(const char *filename) {
     if (file) {
         fprintf(file, "wifi.ssid=%s\n", WifiSSID.c_str());
         fprintf(file, "wifi.password=%s\n", WifiPassword.c_str());
+		fprintf(file, "wifi.dhcp=%d\n", DHCPMode);
+		fprintf(file, "wifi.address=%s,%s,%s,%s,%s\n",
+			StaticIP.toString().c_str(), StaticMask.toString().c_str(), StaticGateway.toString().c_str(),
+			StaticDNS[0].toString().c_str(), StaticDNS[1].toString().c_str());
         fprintf(file, "telnet.password=%s\n", telnetTerminal.getPassword().c_str());
         fprintf(file, "logging.enable=%d\n", logger.isEnabled() ? 1 : 0);
         fprintf(file, "logging.levels=%s\n", logger.getLevelString().c_str());
-        fprintf(file, "logging.filename=%s\n", logger.getFilename());
+        fprintf(file, "logging.filename=%s\n", logger.getFilename().c_str());
         fprintf(file, "logging.maxsize=%d\n", logger.getMaxSize());
         fprintf(file, "logging.serial=%d\n", logger.getSerialOut() ? 1 : 0);
         fprintf(file, "auditlog.filename=%s\n", auditLogger.getFilename().c_str());
@@ -49,11 +53,28 @@ void IniFile::load(const char *filename) {
                 WifiSSID = data;
             } else if (strcmp(field, "wifi.password") == 0) {
                 WifiPassword = data;
+			} else if (strcmp(field, "wifi.dhcp") == 0) {
+				DHCPMode = atoi(data);
+			} else if (strcmp(field, "wifi.address") == 0) {
+				char *params = strdup(data);
+				const char *addr = strtok(params, ",");
+				const char *mask = strtok(nullptr, ",");
+				const char *gateway = strtok(nullptr, ",");
+				const char *dns1 = strtok(nullptr, ",");
+				const char *dns2 = strtok(nullptr, ",");
+				if (dns2) {
+					StaticIP.fromString(addr);
+					StaticMask.fromString(mask);
+					StaticGateway.fromString(gateway);
+					StaticDNS[0].fromString(dns1);
+					StaticDNS[1].fromString(dns2);
+				}
+				free(params);
             } else if (strcmp(field, "telnet.password") == 0) {
                 telnetTerminal.setPassword(data);
             } else if (strcmp(field, "logging.enable") == 0) {
                 logger.enable(atoi(data));
-            } else if (strcmp(field, "logging.level") == 0) {
+            } else if (strcmp(field, "logging.levels") == 0) {
                 logger.setLevelsFromString(data);
             } else if (strcmp(field, "logging.filename") == 0) {
                 logger.setFilename(data);

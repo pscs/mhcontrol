@@ -7,6 +7,7 @@ class NimBLEScan;
 class MyBLEClient;
 class NimBLEAddress;
 class MySecurityCallbacks;
+class MyBLEServer;
 
 struct RegisteredBLEClient {
   RegisteredBLEClient(MyBLEClient &c): client(c) {}
@@ -24,12 +25,18 @@ public:
     void addBLEClient(MyBLEClient &client);
     void setFound(NimBLEAddress addr);
 
+	bool isServerPinRequired() const;
+	void requestServerPin();
+	void closeServerPinScreen();
+
     bool scanInProgress = false;
 
 private:
+	uint32_t scanStarted = 0;
     NimBLEScan *pScanner = nullptr;
     MySecurityCallbacks *pSecurityCallbacks = nullptr;
     std::vector<RegisteredBLEClient> clients; 
+	MyBLEServer *server = nullptr;
 };
 
 void BLEConnect();

@@ -2,10 +2,10 @@
 
 #include <string>
 #include <vector>
+#include <lvgl.h>
 
 class Window;
-struct _lv_obj_t;
-typedef _lv_obj_t lv_obj_t;
+
 
 struct ChildWindow {
 	std::string name;
@@ -21,7 +21,13 @@ public:
 	void addChild(const char *name, Window *child);
 	void removeChild(const char *name);
 
-	virtual void Update();
+	virtual void update();
+	virtual void fastUpdate();
+	virtual void kbDone(lv_event_t *e);
+	virtual lv_keyboard_mode_t kbMode(lv_event_t *e);
+	virtual bool kbValidate(lv_event_t *e);
+	virtual void kbPostValidate(lv_event_t *e);
+
 
 	lv_obj_t *getLvObj();
 

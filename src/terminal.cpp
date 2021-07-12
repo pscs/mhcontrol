@@ -12,9 +12,10 @@
 #include "victron_smartsolar.h"
 #include "victron_B2B.h"
 #include "victron_mainscharger.h"
-
+#include "screens.h"
 #include "logger.h"
 #include "telnet_terminal.h"
+#include "mybleserver.h"
 
 const uint16_t SendBufferSize = 1000;
 const uint16_t BufferSize = 100;
@@ -218,6 +219,7 @@ void Terminal::processCommand(char *cmd) {
         print("mem - show free memory\r\n");
         print("set <setting> <value>\r\n");
         print("show [<setting>]\r\n");
+		print("calibratescreen\r\n");
         print("battery [enable|disable|demo]- show battery data\r\n");
         print("solar [enable|disable|demo]- show solar charger data\r\n");
         print("mains [enable|disable|demo]- show mains charger data\r\n");
@@ -293,6 +295,8 @@ void Terminal::processCommand(char *cmd) {
         ESP.restart();
     } else if ((strcmp(command, "quit") == 0) && (getType() == 'T')) {
         doQuit();
+	} else if (strcmp(command, "calibratescreen") == 0) {
+		ScreenClass::doCalibration();
     } else if (strcmp(command, "battery") == 0) {
         if (param) {
             if (strcmp(param, "enable") == 0) {
@@ -438,6 +442,10 @@ void Terminal::processCommand(char *cmd) {
         printf("Charge Current: %.2f A\r\n", victronMainsCharger.getCurrent(1) / 100.0);
         printf("State: %d (%s)\r\n", victronMainsCharger.getState(), victronMainsCharger.getStateText());
         printf("Temperature: %.2f C\r\n", victronMainsCharger.getTemperature() / 100.0);
+/*	} else if (strcmp(command, "bond") == 0) {
+		if (pBLEServer) {
+			pBLEServer->setPIN(atoi(param));
+		}*/
     } else if (strcmp(command, "wifi") == 0) {
         if (param) {
             const char *param2 = strtok(nullptr, " ");

@@ -20,8 +20,43 @@ uint16_t ScreenClass::calibData[5];
 
 extern lv_img_dsc_t imgSdCard;
 
+lv_style_t *style_textbox;
+lv_style_t *style_textbox_invalid;
+lv_style_t *style_textbox_disabled;
+
 void ScreenClass::Create(lv_obj_t *scr)
 {
+	style_textbox = new lv_style_t;
+	lv_style_init(style_textbox);
+	//lv_style_set_bg_color(style_textbox, lv_palette_main(LV_PALETTE_LIGHT_GREEN));
+	//lv_style_set_border_width(style_textbox, 2);
+	//lv_style_set_border_color(style_textbox, lv_color_black());
+
+	style_textbox_invalid = new lv_style_t;
+	*style_textbox_invalid = *style_textbox;
+	lv_style_set_text_color(style_textbox_invalid, lv_palette_main(LV_PALETTE_RED));
+
+	style_textbox_disabled = new lv_style_t;
+	*style_textbox_disabled = *style_textbox;
+	lv_style_set_bg_color(style_textbox_invalid, lv_palette_main(LV_PALETTE_GREY));
+
+	lv_theme_t *th_act = lv_disp_get_theme(NULL);
+	static lv_theme_t th_new;
+	th_new = *th_act;
+	lv_theme_set_parent(&th_new, th_act);
+	lv_theme_set_apply_cb(&th_new, [](lv_theme_t *, lv_obj_t *obj) {
+		if (lv_obj_check_type(obj, &lv_label_class)) {
+			lv_obj_add_style(obj, style_textbox, 0);
+		}
+		if (lv_obj_check_type(obj, &lv_textarea_class)) {
+			lv_obj_add_style(obj, style_textbox, 0);
+			lv_obj_add_style(obj, style_textbox_invalid, LV_STATE_USER_1);
+			lv_obj_add_style(obj, style_textbox_disabled, LV_STATE_DISABLED);
+		}
+	});
+
+	lv_disp_set_theme(NULL, &th_new);
+
 	tabs = lv_tabview_create(scr, LV_DIR_TOP, 20);
 	lv_obj_set_size(tabs, lv_disp_get_hor_res(NULL), lv_disp_get_ver_res(NULL) - 20);
 	lv_obj_align(tabs, LV_ALIGN_BOTTOM_MID, 0, 0);
@@ -51,16 +86,29 @@ void ScreenClass::Create(lv_obj_t *scr)
 	lv_label_set_text(time_label, "time");
 	lv_obj_align(time_label, LV_ALIGN_TOP_MID, 0, 0);
 
+	kb = lv_keyboard_create(lv_layer_top());
+	lv_obj_add_flag(kb, LV_OBJ_FLAG_IGNORE_LAYOUT | LV_OBJ_FLAG_HIDDEN);
+	lv_obj_align(kb, LV_ALIGN_BOTTOM_MID, 0, 0);
+	lv_obj_set_size(kb, screenWidth, screenHeight / 2);
+	lv_obj_add_event_cb(kb, [](lv_event_t *e) {
+		Screen.closeKeyboard();
+	}, LV_EVENT_CANCEL, NULL);
+
 	powerScreen.Create(tabPower);
-	Options.Create(tabOptions);
+	options.Create(tabOptions);
 	Location.Create(tabLocation);
 	weatherScreen.Create(tabWeather);
 }
 
+void ScreenClass::fastUpdate() {
+	powerScreen.fastUpdate();
+	options.fastUpdate();
+}
+
 void ScreenClass::Update()
 {
-	powerScreen.Update();
-	Options.Update();
+	powerScreen.update();
+	options.update();
 	Location.Update();
 	weatherScreen.Update();
 	log_v("End Weather Update\n");
@@ -85,9 +133,7 @@ void ScreenClass::updateSdCardIcon(bool mounted) {
 }
 
 
-void ScreenClass::doCalibration(lv_event_t *) {
-	sound.addNote(1000, 100);
-
+void ScreenClass::doCalibration() {
 	tft.fillScreen(TFT_BLACK);
 	tft.setCursor(20, 0);
 	tft.setTextFont(2);
@@ -149,4 +195,61 @@ std::string ScreenClass::getCalibrationString() {
 	char buffer[50];
 	snprintf(buffer, sizeof(buffer), "%d,%d,%d,%d,%d", calibData[0], calibData[1], calibData[2], calibData[3], calibData[4]);
 	return buffer;
+}
+
+void ScreenClass::textFieldEvent(lv_event_t *e) {
+	lv_event_code_t code = lv_event_get_code(e);
+	if ((code == LV_EVENT_CLICKED) || (code == LV_EVENT_FOCUSED)) {
+		lv_obj_t *t = lv_event_get_target(e);
+		if (!Screen.kbParent) {
+			Screen.kbParent = lv_obj_get_parent(lv_obj_get_parent(t));
+			Screen.kbParentHeight = lv_obj_get_height(Screen.kbParent);
+			lv_area_t coords;
+			lv_obj_get_coords(Screen.kbParent, &coords);
+			logger.printf(LOG_GENERAL, LOG_DEBUG, "onkbd resize %d - %d - %d\n", screenHeight, coords.y1, (screenHeight / 2) - coords.y1);
+			lv_obj_set_height(Screen.kbParent, (screenHeight / 2) - coords.y1);
+
+			lv_obj_get_coords(t, &coords);
+			lv_obj_scroll_to_view(t, LV_ANIM_ON);
+		}
+		lv_keyboard_mode_t mode = LV_KEYBOARD_MODE_TEXT_LOWER;
+		Window *p = reinterpret_cast<Window *>(lv_event_get_user_data(e));
+		if (p) {
+			mode = p->kbMode(e);
+		}
+
+		lv_keyboard_set_mode(Screen.kb, mode);
+		lv_obj_clear_flag(Screen.kb, LV_OBJ_FLAG_HIDDEN);
+		lv_keyboard_set_textarea(Screen.kb, t);
+	} else if (code == LV_EVENT_VALUE_CHANGED) {
+		Window *p = reinterpret_cast<Window *>(lv_event_get_user_data(e));
+		if (p) {
+
+			if (p->kbValidate(e)) {
+				lv_obj_clear_state(lv_event_get_target(e), LV_STATE_USER_1);
+			} else {
+				lv_obj_add_state(lv_event_get_target(e), LV_STATE_USER_1);
+			}
+			p->kbPostValidate(e);
+		}
+
+	} else if (code == LV_EVENT_READY) {
+		printf("text field ready event\n");
+		Screen.closeKeyboard();
+		void *p = lv_event_get_user_data(e);
+		printf("param = %lu\n", p);
+		if (p) {
+			printf("send kbdone\n");
+			reinterpret_cast<Window *>(p)->kbDone(e);
+		}
+	}
+}
+
+void ScreenClass::closeKeyboard() {
+	lv_obj_add_flag(kb, LV_OBJ_FLAG_HIDDEN);
+	if (kbParent && kbParentHeight) {
+		lv_obj_set_height(kbParent, kbParentHeight);
+	}
+	kbParent = nullptr;
+	kbParentHeight = 0;
 }

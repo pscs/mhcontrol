@@ -1,6 +1,5 @@
 #include "window.h"
 
-#include <lvgl.h>
 #include "logger.h"
 #include <algorithm>
 
@@ -25,10 +24,30 @@ lv_obj_t *Window::getLvObj() {
 	return scr;
 }
 
-void Window::Update() {
+void Window::update() {
 	for (const auto w: children) {
-		w.child->Update();
+		w.child->update();
 	}
+}
+
+void Window::fastUpdate() {
+	for (const auto w: children) {
+		w.child->fastUpdate();
+	}
+}
+
+void Window::kbDone(lv_event_t *) {
+}
+
+lv_keyboard_mode_t Window::kbMode(lv_event_t *e) {
+	return LV_KEYBOARD_MODE_TEXT_LOWER;
+}
+
+bool Window::kbValidate(lv_event_t *e) {
+	return true;
+}
+
+void Window::kbPostValidate(lv_event_t *e) {
 }
 
 void Window::addChild(const char *name, Window *window) {

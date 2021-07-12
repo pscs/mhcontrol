@@ -8,7 +8,7 @@ class PowerScreen: public Window {
 public:
 	void Create(lv_obj_t *scr);
 
-	void Update() override;
+	void update() override;
 
 //	void showMainsInfo();
 	void showSolarInfo();
@@ -35,7 +35,7 @@ class MainsChargerInfoWindow: public Window {
 public:
 	MainsChargerInfoWindow(Window *parent);
 
-	void Update() override;
+	void update() override;
 
 private:
 	lv_obj_t *connState;
@@ -50,7 +50,7 @@ class SolarInfoWindow: public Window {
 public:
 	SolarInfoWindow(Window *parent);
 
-	void Update() override;
+	void update() override;
 
 private:
 	lv_obj_t *connState;
@@ -67,7 +67,7 @@ class B2BInfoWindow: public Window {
 public:
 	B2BInfoWindow(Window *parent);
 
-	void Update() override;
+	void update() override;
 
 private:
 	lv_obj_t *connState;
